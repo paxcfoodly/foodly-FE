@@ -11,6 +11,7 @@ import {
   Select,
   DatePicker,
   Table,
+  Modal,
   message,
   Popconfirm,
 } from 'antd';
@@ -18,6 +19,8 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
+  CheckCircleOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { SorterResult } from 'antd/es/table/interface';
@@ -120,6 +123,15 @@ export default function ProdPlanPage() {
 
   // Lookup data
   const [itemOptions, setItemOptions] = useState<{ label: string; value: string }[]>([]);
+
+  // Material check modal
+  const [materialModalOpen, setMaterialModalOpen] = useState(false);
+  const [materialData, setMaterialData] = useState<{
+    planNo: string;
+    itemCd: string;
+    materials: { itemCd: string; itemNm: string; requiredQty: number; availableQty: number; shortage: number }[];
+  } | null>(null);
+  const [materialLoading, setMaterialLoading] = useState(false);
 
   /* ── Load dropdown options ─── */
   useEffect(() => {
@@ -280,6 +292,37 @@ export default function ProdPlanPage() {
     [fetchPlans, pagination.page, pagination.pageSize, sortField, sortOrder, filters],
   );
 
+  /* ── Confirm handler ─── */
+  const handleConfirm = useCallback(
+    async (record: ProdPlanRow) => {
+      try {
+        await apiClient.patch(`/v1/prod-plans/${record.plan_id}/confirm`);
+        message.success('생산계획이 확정되었습니다.');
+        fetchPlans(pagination.page, pagination.pageSize, sortField, sortOrder, filters);
+      } catch (err: any) {
+        const msg = err?.response?.data?.message ?? '확정에 실패했습니다.';
+        message.error(msg);
+      }
+    },
+    [fetchPlans, pagination.page, pagination.pageSize, sortField, sortOrder, filters],
+  );
+
+  /* ── Material check handler ─── */
+  const handleMaterialCheck = useCallback(async (record: ProdPlanRow) => {
+    setMaterialLoading(true);
+    setMaterialModalOpen(true);
+    setMaterialData(null);
+    try {
+      const res = await apiClient.get(`/v1/prod-plans/${record.plan_id}/material-check`);
+      setMaterialData(res.data?.data ?? null);
+    } catch (err: any) {
+      message.error(err?.response?.data?.message ?? '자재 가용성 조회에 실패했습니다.');
+      setMaterialModalOpen(false);
+    } finally {
+      setMaterialLoading(false);
+    }
+  }, []);
+
   /* ── Modal initial values ─── */
   const modalInitialValues = useMemo(() => {
     if (!editItem) return { priority: 5 } as Partial<ProdPlanFormValues>;
@@ -362,13 +405,41 @@ export default function ProdPlanPage() {
       {
         title: '관리',
         dataIndex: '_action',
-        width: 100,
+        width: 200,
         align: 'center' as const,
         fixed: 'right' as const,
         render: (_: unknown, record: ProdPlanRow) => {
           const isPlan = record.status === 'PLAN';
           return (
             <Space size={4}>
+              {isPlan ? (
+                <Popconfirm
+                  title="생산계획을 확정하시겠습니까?"
+                  description="확정 후에는 수정·삭제가 불가합니다."
+                  onConfirm={() => handleConfirm(record)}
+                  okText="확정"
+                  cancelText="취소"
+                >
+                  <PermissionButton
+                    action="update"
+                    menuUrl={MENU_URL}
+                    fallback="hide"
+                    size="small"
+                    type="text"
+                    icon={<CheckCircleOutlined />}
+                    style={{ color: '#52c41a' }}
+                  >
+                    {''}
+                  </PermissionButton>
+                </Popconfirm>
+              ) : null}
+              <Button
+                size="small"
+                type="text"
+                icon={<ExperimentOutlined />}
+                onClick={() => handleMaterialCheck(record)}
+                title="자재 가용성"
+              />
               {isPlan ? (
                 <PermissionButton
                   action="update"
@@ -412,7 +483,7 @@ export default function ProdPlanPage() {
         },
       },
     ],
-    [handleEdit, handleDelete],
+    [handleEdit, handleDelete, handleConfirm, handleMaterialCheck],
   );
 
   /* ── Render ─── */
@@ -461,6 +532,53 @@ export default function ProdPlanPage() {
         }}
         onChange={handleTableChange as any}
       />
+
+      {/* Material Availability Modal */}
+      <Modal
+        title={`자재 가용성 — ${materialData?.planNo ?? ''}`}
+        open={materialModalOpen}
+        onCancel={() => setMaterialModalOpen(false)}
+        footer={null}
+        width={700}
+      >
+        <Table
+          dataSource={materialData?.materials ?? []}
+          rowKey="itemCd"
+          loading={materialLoading}
+          size="small"
+          pagination={false}
+          columns={[
+            { title: '자재코드', dataIndex: 'itemCd', width: 120 },
+            { title: '자재명', dataIndex: 'itemNm', width: 160, ellipsis: true },
+            {
+              title: '소요량',
+              dataIndex: 'requiredQty',
+              width: 100,
+              align: 'right' as const,
+              render: (v: number) => v?.toLocaleString(),
+            },
+            {
+              title: '가용재고',
+              dataIndex: 'availableQty',
+              width: 100,
+              align: 'right' as const,
+              render: (v: number) => v?.toLocaleString(),
+            },
+            {
+              title: '부족량',
+              dataIndex: 'shortage',
+              width: 100,
+              align: 'right' as const,
+              render: (v: number) => (
+                <span style={{ color: v > 0 ? '#ff4d4f' : '#52c41a', fontWeight: 600 }}>
+                  {v > 0 ? `-${v.toLocaleString()}` : '충분'}
+                </span>
+              ),
+            },
+          ]}
+          locale={{ emptyText: 'BOM이 등록되지 않았거나 소요 자재가 없습니다.' }}
+        />
+      </Modal>
 
       {/* Create/Edit Modal */}
       <FormModal<ProdPlanFormValues>
