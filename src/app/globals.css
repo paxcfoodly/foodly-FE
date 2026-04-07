@@ -1,0 +1,54 @@
+/* Foodly MES — 글로벌 스타일 */
+/* Pretendard 웹폰트 */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  font-family:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 제조현장 고대비 모드 — 추후 토글 예정 */
+.high-contrast {
+  --text-primary: #000;
+  --text-secondary: #333;
+  --bg-primary: #fff;
+  --border-color: #000;
+}
+
+/* 스크롤바 스타일링 (WebKit) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Ant Design Sider 트리거 숨김 (커스텀 토글 사용) */
+.ant-layout-sider-trigger {
+  display: none;
+}
+
+/* 안돈 모드 전체화면 */
+.andon-mode {
+  background: #000 !important;
+  color: #fff !important;
+}
+.andon-mode .ant-typography {
+  color: #fff !important;
+}
