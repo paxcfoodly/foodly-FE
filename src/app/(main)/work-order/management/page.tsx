@@ -22,6 +22,7 @@ import {
   DeleteOutlined,
   SplitCellsOutlined,
   SwapOutlined,
+  FilePdfOutlined,
 } from '@ant-design/icons';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { SorterResult } from 'antd/es/table/interface';
@@ -352,6 +353,26 @@ export default function WorkOrderManagementPage() {
     }
   }, [splitTarget, splitForm, fetchOrders, pagination.page, pagination.pageSize, sortField, sortOrder, filters]);
 
+  /* ── PDF download handler ─── */
+  const handlePdfDownload = useCallback(async (record: WorkOrderRow) => {
+    try {
+      const res = await apiClient.get(`/v1/work-orders/${record.wo_id}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `work-order-${record.wo_no}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      message.error(err?.response?.data?.message ?? 'PDF 다운로드에 실패했습니다.');
+    }
+  }, []);
+
   /* ── Modal initial values ─── */
   const modalInitialValues = useMemo(() => {
     if (!editItem) return { priority: 5 } as Partial<WorkOrderFormValues>;
@@ -472,6 +493,15 @@ export default function WorkOrderManagementPage() {
 
           return (
             <Space size={4}>
+              {/* PDF Download */}
+              <Button
+                size="small"
+                type="text"
+                icon={<FilePdfOutlined />}
+                onClick={() => handlePdfDownload(record)}
+                title="PDF"
+              />
+
               {/* Status change */}
               {nextStatuses.length > 0 && (
                 <Dropdown menu={{ items: statusMenuItems }} trigger={['click']}>
@@ -551,7 +581,7 @@ export default function WorkOrderManagementPage() {
         },
       },
     ],
-    [handleEdit, handleDelete, handleStatusChange, handleSplitOpen],
+    [handleEdit, handleDelete, handleStatusChange, handleSplitOpen, handlePdfDownload],
   );
 
   /* ── Render ─── */
