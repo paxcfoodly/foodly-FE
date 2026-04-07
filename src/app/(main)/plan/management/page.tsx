@@ -14,6 +14,7 @@ import {
   Modal,
   message,
   Popconfirm,
+  Segmented,
 } from 'antd';
 import {
   PlusOutlined,
@@ -21,7 +22,10 @@ import {
   DeleteOutlined,
   CheckCircleOutlined,
   ExperimentOutlined,
+  UnorderedListOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
+import dynamic from 'next/dynamic';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { SorterResult } from 'antd/es/table/interface';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -30,6 +34,9 @@ import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm'
 import apiClient from '@/lib/apiClient';
 import type { PaginatedResponse } from '@/types';
 import dayjs from 'dayjs';
+
+/* ── Dynamic import for Gantt (SSR disabled) ─── */
+const GanttChart = dynamic(() => import('@/components/plan/GanttChart'), { ssr: false });
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -123,6 +130,9 @@ export default function ProdPlanPage() {
 
   // Lookup data
   const [itemOptions, setItemOptions] = useState<{ label: string; value: string }[]>([]);
+
+  // View mode: list or gantt
+  const [viewMode, setViewMode] = useState<'list' | 'gantt'>('list');
 
   // Material check modal
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
@@ -499,9 +509,20 @@ export default function ProdPlanPage() {
 
       {/* Toolbar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ color: '#666', fontSize: 13 }}>
-          총 <strong>{pagination.total.toLocaleString()}</strong>건
-        </span>
+        <Space size={16}>
+          <span style={{ color: '#666', fontSize: 13 }}>
+            총 <strong>{pagination.total.toLocaleString()}</strong>건
+          </span>
+          <Segmented
+            size="small"
+            value={viewMode}
+            onChange={(val) => setViewMode(val as 'list' | 'gantt')}
+            options={[
+              { label: '목록 뷰', value: 'list', icon: <UnorderedListOutlined /> },
+              { label: '간트 뷰', value: 'gantt', icon: <BarChartOutlined /> },
+            ]}
+          />
+        </Space>
         <PermissionButton
           action="create"
           menuUrl={MENU_URL}
@@ -513,25 +534,29 @@ export default function ProdPlanPage() {
         </PermissionButton>
       </div>
 
-      {/* Table */}
-      <Table<ProdPlanRow>
-        columns={columns}
-        dataSource={plans}
-        rowKey="plan_id"
-        loading={loading}
-        size="small"
-        scroll={{ x: 1100 }}
-        pagination={{
-          current: pagination.page,
-          pageSize: pagination.pageSize,
-          total: pagination.total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
-          showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}건`,
-        }}
-        onChange={handleTableChange as any}
-      />
+      {/* Table / Gantt toggle */}
+      {viewMode === 'list' ? (
+        <Table<ProdPlanRow>
+          columns={columns}
+          dataSource={plans}
+          rowKey="plan_id"
+          loading={loading}
+          size="small"
+          scroll={{ x: 1100 }}
+          pagination={{
+            current: pagination.page,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}건`,
+          }}
+          onChange={handleTableChange as any}
+        />
+      ) : (
+        <GanttChart plans={plans} />
+      )}
 
       {/* Material Availability Modal */}
       <Modal
