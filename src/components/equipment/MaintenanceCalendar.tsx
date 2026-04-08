@@ -3,7 +3,7 @@
 import React, { useCallback } from 'react';
 import { Calendar, Tag, Badge, Spin } from 'antd';
 import type { Dayjs } from 'dayjs';
-import type { CellRenderInfo } from 'rc-picker/lib/interface';
+import type { CellRenderInfo } from '@rc-component/picker/es/interface';
 import dayjs from 'dayjs';
 
 /* ── Types ─────────────────────────────────────────── */

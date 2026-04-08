@@ -272,7 +272,7 @@ export default function MaintResultFormModal({
         autoComplete="off"
       >
         {/* Section: Basic info */}
-        <Divider orientation="left" plain style={{ marginTop: 0 }}>
+        <Divider titlePlacement="left" plain style={{ marginTop: 0 }}>
           기본 정보
         </Divider>
 
@@ -355,7 +355,7 @@ export default function MaintResultFormModal({
         {/* Section: Checklist results — per D-10 */}
         {checklistItems.length > 0 && (
           <>
-            <Divider orientation="left" plain>
+            <Divider titlePlacement="left" plain>
               점검항목 체크 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                 (모든 항목 필수)
               </Typography.Text>
@@ -408,7 +408,7 @@ export default function MaintResultFormModal({
         )}
 
         {/* Section: Replaced parts — per D-11 */}
-        <Divider orientation="left" plain>
+        <Divider titlePlacement="left" plain>
           교체 부품
         </Divider>
 
@@ -466,7 +466,7 @@ export default function MaintResultFormModal({
         </Button>
 
         {/* Section: Photo attachment — per D-12 */}
-        <Divider orientation="left" plain>
+        <Divider titlePlacement="left" plain>
           사진 첨부
         </Divider>
 
