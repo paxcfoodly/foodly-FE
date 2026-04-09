@@ -20,6 +20,7 @@ import {
   DeleteOutlined,
   TeamOutlined,
   UserOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { SorterResult } from 'antd/es/table/interface';
@@ -62,6 +63,13 @@ interface AssignmentRow {
 interface WorkerOption {
   worker_id: string;
   worker_nm: string;
+}
+
+interface WorkerAvailability {
+  worker_id: string;
+  worker_nm: string;
+  skills: { process_cd: string; skill_level: number }[];
+  conflicting_wos: { wo_id: number; wo_no: string }[];
 }
 
 const MENU_URL = '/work-order/assignment';
@@ -109,6 +117,8 @@ export default function WorkOrderAssignmentPage() {
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [workerOptions, setWorkerOptions] = useState<{ label: string; value: string }[]>([]);
+  const [workerAvailability, setWorkerAvailability] = useState<WorkerAvailability[]>([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
   const [assignSubmitting, setAssignSubmitting] = useState(false);
 
@@ -117,7 +127,7 @@ export default function WorkOrderAssignmentPage() {
     { wo_id: number; wo_no: string; worker_id: string; worker_nm: string; assign_dt: string; status: string; item_nm: string }[]
   >([]);
 
-  /* ── Load worker options ─── */
+  /* ── Load worker options (base list) ─── */
   useEffect(() => {
     apiClient
       .get<PaginatedResponse<WorkerOption>>('/v1/workers', { params: { limit: 500, 'filter[use_yn]': 'Y' } })
@@ -125,7 +135,23 @@ export default function WorkOrderAssignmentPage() {
         const list = res.data?.data ?? [];
         setWorkerOptions(list.map((w) => ({ label: `${w.worker_id} - ${w.worker_nm}`, value: w.worker_id })));
       })
-      .catch(() => {});
+      .catch(() => {
+        message.error('작업자 목록을 불러오지 못했습니다. 페이지를 새로고침하세요.');
+      });
+  }, []);
+
+  /* ── Fetch worker availability when modal opens ─── */
+  const fetchWorkerAvailability = useCallback(async (woId: number) => {
+    setAvailabilityLoading(true);
+    try {
+      const res = await apiClient.get<WorkerAvailability[]>(`/v1/work-orders/${woId}/workers/availability`);
+      setWorkerAvailability(res.data ?? []);
+    } catch {
+      // Non-blocking — availability info is informational only
+      setWorkerAvailability([]);
+    } finally {
+      setAvailabilityLoading(false);
+    }
   }, []);
 
   /* ── Fetch WO list ─── */
@@ -143,8 +169,9 @@ export default function WorkOrderAssignmentPage() {
         const body = res.data;
         setOrders(body.data ?? []);
         if (body.pagination) setPagination({ page: body.pagination.page, pageSize: body.pagination.pageSize, total: body.pagination.total });
-      } catch (err: any) {
-        message.error(err?.response?.data?.message ?? '작업지시 목록 조회에 실패했습니다.');
+      } catch (err: unknown) {
+        const e = err as { response?: { data?: { message?: string } } };
+        message.error(e?.response?.data?.message ?? '작업지시 목록 조회에 실패했습니다.');
       } finally {
         setLoading(false);
       }
@@ -160,8 +187,9 @@ export default function WorkOrderAssignmentPage() {
     try {
       const res = await apiClient.get(`/v1/work-orders/${woId}/workers`);
       setAssignments(res.data?.data ?? []);
-    } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '배정 정보 조회에 실패했습니다.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      message.error(e?.response?.data?.message ?? '배정 정보 조회에 실패했습니다.');
     } finally {
       setAssignLoading(false);
     }
@@ -221,8 +249,10 @@ export default function WorkOrderAssignmentPage() {
   const handleAssignOpen = useCallback(() => {
     if (!selectedWo) { message.warning('먼저 작업지시를 선택하세요.'); return; }
     setSelectedWorkerIds([]);
+    setWorkerAvailability([]);
     setAssignModalOpen(true);
-  }, [selectedWo]);
+    fetchWorkerAvailability(selectedWo.wo_id);
+  }, [selectedWo, fetchWorkerAvailability]);
 
   const handleAssignSubmit = useCallback(async () => {
     if (!selectedWo || selectedWorkerIds.length === 0) { message.warning('배정할 작업자를 선택하세요.'); return; }
@@ -233,8 +263,9 @@ export default function WorkOrderAssignmentPage() {
       setAssignModalOpen(false);
       fetchAssignments(selectedWo.wo_id);
       fetchOrders(pagination.page, pagination.pageSize, sortField, sortOrder, filters);
-    } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '작업자 배정에 실패했습니다.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      message.error(e?.response?.data?.message ?? '작업자 배정에 실패했습니다.');
     } finally {
       setAssignSubmitting(false);
     }
@@ -244,13 +275,28 @@ export default function WorkOrderAssignmentPage() {
     if (!selectedWo) return;
     try {
       await apiClient.delete(`/v1/work-orders/${selectedWo.wo_id}/workers/${workerId}`);
-      message.success('배정이 해제되었습니다.');
+      message.success('배정이 취소되었습니다.');
       fetchAssignments(selectedWo.wo_id);
       fetchOrders(pagination.page, pagination.pageSize, sortField, sortOrder, filters);
-    } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '배정 해제에 실패했습니다.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      message.error(e?.response?.data?.message ?? '배정 취소에 실패했습니다. 다시 시도하세요.');
     }
   }, [selectedWo, fetchAssignments, fetchOrders, pagination.page, pagination.pageSize, sortField, sortOrder, filters]);
+
+  /* ── Build enriched Select options with skill/conflict tags ─── */
+  const enrichedWorkerOptions = useMemo(() => {
+    // Build availability map
+    const availMap = new Map<string, WorkerAvailability>();
+    workerAvailability.forEach((w) => availMap.set(w.worker_id, w));
+
+    return workerOptions
+      .filter((w) => !assignments.some((a) => a.worker_id === w.value))
+      .map((w) => {
+        const avail = availMap.get(w.value);
+        return { ...w, avail };
+      });
+  }, [workerOptions, assignments, workerAvailability]);
 
   /* ── Columns ─── */
   const woColumns = useMemo(() => [
@@ -274,10 +320,27 @@ export default function WorkOrderAssignmentPage() {
     { title: '부서', dataIndex: 'dept_cd', width: 100, render: (v: unknown) => (v as string) ?? '-' },
     { title: '배정일시', dataIndex: 'assign_dt', width: 150, render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm') : '-' },
     {
-      title: '해제', dataIndex: '_action', width: 60, align: 'center' as const,
+      title: '해제', dataIndex: '_action', width: 70, align: 'center' as const,
       render: (_: unknown, r: AssignmentRow) => (
-        <Popconfirm title="이 작업자의 배정을 해제하시겠습니까?" onConfirm={() => handleUnassign(r.worker_id)} okText="해제" cancelText="취소">
-          <PermissionButton action="delete" menuUrl={MENU_URL} fallback="hide" size="small" type="text" danger icon={<DeleteOutlined />}>{''}</PermissionButton>
+        <Popconfirm
+          title="이 작업자의 배정을 취소하시겠습니까?"
+          onConfirm={() => handleUnassign(r.worker_id)}
+          okText="배정 취소"
+          okType="danger"
+          cancelText="돌아가기"
+        >
+          <PermissionButton
+            action="delete"
+            menuUrl={MENU_URL}
+            fallback="hide"
+            size="small"
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            aria-label="배정 취소"
+          >
+            {''}
+          </PermissionButton>
         </Popconfirm>
       ),
     },
@@ -329,10 +392,17 @@ export default function WorkOrderAssignmentPage() {
             size="small"
           >
             {selectedWo ? (
-              <Table<AssignmentRow>
-                columns={assignColumns} dataSource={assignments} rowKey="worker_id" loading={assignLoading}
-                size="small" pagination={false} scroll={{ x: 500 }} locale={{ emptyText: '배정된 작업자가 없습니다.' }}
-              />
+              assignments.length === 0 && !assignLoading ? (
+                <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>배정된 작업자가 없습니다</div>
+                  <div style={{ color: '#888', fontSize: 13 }}>작업자 배정 버튼을 눌러 이 작업지시에 작업자를 배정하세요.</div>
+                </div>
+              ) : (
+                <Table<AssignmentRow>
+                  columns={assignColumns} dataSource={assignments} rowKey="worker_id" loading={assignLoading}
+                  size="small" pagination={false} scroll={{ x: 500 }}
+                />
+              )
             ) : (
               <Empty description="좌측 목록에서 작업지시를 선택하세요." />
             )}
@@ -368,14 +438,47 @@ export default function WorkOrderAssignmentPage() {
       <Modal
         title={`작업자 배정 — ${selectedWo?.wo_no ?? ''}`} open={assignModalOpen}
         onCancel={() => setAssignModalOpen(false)} onOk={handleAssignSubmit}
-        confirmLoading={assignSubmitting} okText="배정" cancelText="취소" destroyOnClose width={480}
+        confirmLoading={assignSubmitting} okText="배정" cancelText="취소" destroyOnClose width={520}
       >
         <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>배정할 작업자를 선택하세요. (복수 선택 가능)</div>
         <Select
-          mode="multiple" placeholder="작업자 검색" style={{ width: '100%' }}
-          options={workerOptions.filter((w) => !assignments.some((a) => a.worker_id === w.value))}
-          value={selectedWorkerIds} onChange={setSelectedWorkerIds}
-          showSearch optionFilterProp="label" maxTagCount={5}
+          mode="multiple"
+          placeholder="작업자 검색"
+          style={{ width: '100%' }}
+          value={selectedWorkerIds}
+          onChange={setSelectedWorkerIds}
+          showSearch
+          optionFilterProp="label"
+          maxTagCount={5}
+          loading={availabilityLoading}
+          optionRender={(option) => {
+            const avail = enrichedWorkerOptions.find((w) => w.value === option.value)?.avail;
+            const hasSkill = avail && avail.skills.length > 0;
+            const hasConflict = avail && avail.conflicting_wos.length > 0;
+
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span>{option.label as string}</span>
+                {avail && hasSkill && (
+                  <Tag color="green">Lv.{avail.skills[0].skill_level}</Tag>
+                )}
+                {avail && !hasSkill && (
+                  <Tooltip title="이 작업자는 해당 공정의 스킬이 없습니다. 배정은 가능하나 확인이 필요합니다.">
+                    <Tag color="orange"><WarningOutlined /> 스킬미보유</Tag>
+                  </Tooltip>
+                )}
+                {hasConflict && avail && avail.conflicting_wos.map((cwo) => (
+                  <Tooltip
+                    key={cwo.wo_id}
+                    title={`이 작업자는 ${cwo.wo_no}에 이미 배정되어 있습니다. 배정은 가능하나 확인이 필요합니다.`}
+                  >
+                    <Tag color="red">배정중: {cwo.wo_no}</Tag>
+                  </Tooltip>
+                ))}
+              </div>
+            );
+          }}
+          options={enrichedWorkerOptions.map((w) => ({ label: w.label, value: w.value }))}
         />
       </Modal>
     </div>
