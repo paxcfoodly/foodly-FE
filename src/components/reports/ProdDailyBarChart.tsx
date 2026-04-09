@@ -43,7 +43,6 @@ export default function ProdDailyBarChart({ data }: ProdDailyBarChartProps) {
         type: 'value',
         name: '달성률(%)',
         min: 0,
-        max: 100,
         position: 'right',
         axisLabel: {
           formatter: '{value}%',
