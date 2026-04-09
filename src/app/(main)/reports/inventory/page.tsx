@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Card,
-  DatePicker,
   Button,
   Space,
   Typography,
@@ -15,7 +14,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
-import dayjs, { type Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import InventoryBarChart from '@/components/reports/InventoryBarChart';
 import ExcelDownloadButton from '@/components/common/ExcelDownloadButton';
 import apiClient from '@/lib/apiClient';
@@ -112,7 +111,6 @@ const stagnantStyles = `
 // ─── Page ───
 
 export default function InventoryReportPage() {
-  const [baseDate, setBaseDate] = useState<Dayjs>(dayjs());
   const [itemCd, setItemCd] = useState<string | undefined>(undefined);
   const [whCd, setWhCd] = useState<string | undefined>(undefined);
   const [stagnantOnly, setStagnantOnly] = useState(false);
@@ -174,7 +172,6 @@ export default function InventoryReportPage() {
   };
 
   const handleReset = () => {
-    setBaseDate(dayjs());
     setItemCd(undefined);
     setWhCd(undefined);
     setStagnantOnly(false);
@@ -198,11 +195,6 @@ export default function InventoryReportPage() {
       {/* Search Form */}
       <Card size="small" style={{ marginBottom: 0 }}>
         <Space wrap>
-          <span>기준일:</span>
-          <DatePicker
-            value={baseDate}
-            onChange={(val) => { if (val) setBaseDate(val); }}
-          />
           <Select
             placeholder="품목 전체"
             value={itemCd}
@@ -255,7 +247,7 @@ export default function InventoryReportPage() {
         title="재고 상세"
         extra={
           <ExcelDownloadButton
-            filename={`재고현황_${baseDate.format('YYYY-MM-DD')}`}
+            filename={`재고현황_${dayjs().format('YYYY-MM-DD')}`}
             columns={excelColumns}
             data={data as unknown as Record<string, unknown>[]}
             disabled={data.length === 0 || loading}
