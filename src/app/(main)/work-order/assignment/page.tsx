@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   Space,
@@ -122,6 +122,9 @@ export default function WorkOrderAssignmentPage() {
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
   const [assignSubmitting, setAssignSubmitting] = useState(false);
 
+  // AbortController ref for cancelling in-flight assignment fetches
+  const assignAbortRef = useRef<AbortController | null>(null);
+
   // Gantt data: all assignments across visible WOs
   const [allAssignments, setAllAssignments] = useState<
     { wo_id: number; wo_no: string; worker_id: string; worker_nm: string; assign_dt: string; status: string; item_nm: string }[]
@@ -197,11 +200,20 @@ export default function WorkOrderAssignmentPage() {
 
   /* ── Fetch all assignments for gantt ─── */
   const fetchAllAssignments = useCallback(async (woList: WorkOrderRow[]) => {
+    // Cancel any previous in-flight batch
+    if (assignAbortRef.current) {
+      assignAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    assignAbortRef.current = controller;
+
     try {
       const results = await Promise.all(
         woList.slice(0, 50).map(async (wo) => {
           try {
-            const res = await apiClient.get(`/v1/work-orders/${wo.wo_id}/workers`);
+            const res = await apiClient.get(`/v1/work-orders/${wo.wo_id}/workers`, {
+              signal: controller.signal,
+            });
             const workers: AssignmentRow[] = res.data?.data ?? [];
             return workers.map((w) => ({
               wo_id: wo.wo_id, wo_no: wo.wo_no, worker_id: w.worker_id,
@@ -211,8 +223,10 @@ export default function WorkOrderAssignmentPage() {
           } catch { return []; }
         }),
       );
-      setAllAssignments(results.flat());
-    } catch { /* ignore */ }
+      if (!controller.signal.aborted) {
+        setAllAssignments(results.flat());
+      }
+    } catch { /* ignore aborted / network errors */ }
   }, []);
 
   useEffect(() => { if (orders.length > 0) fetchAllAssignments(orders); }, [orders, fetchAllAssignments]);
