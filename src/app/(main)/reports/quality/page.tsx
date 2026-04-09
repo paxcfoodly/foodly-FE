@@ -281,7 +281,7 @@ export default function QualityReportPage() {
         <Table<DetailRow>
           columns={detailColumns}
           dataSource={filteredData}
-          rowKey={(r) => `${r.defect_type_cd}-${r.defect_date}-${r.defect_qty}`}
+          rowKey={(r, index) => `${r.defect_type_cd}-${r.defect_date}-${r.defect_qty}-${index}`}
           loading={loading}
           size="small"
           scroll={{ x: 'max-content' }}
