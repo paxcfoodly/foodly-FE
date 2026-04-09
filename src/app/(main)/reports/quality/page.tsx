@@ -96,14 +96,17 @@ export default function QualityReportPage() {
   const startDate = dateRange[0].format('YYYY-MM-DD');
   const endDate = dateRange[1].format('YYYY-MM-DD');
 
-  const fetchAll = useCallback(async (start: string, end: string) => {
+  const fetchAll = useCallback(async (start: string, end: string, defectType?: string) => {
     setLoading(true);
     try {
+      const detailParams: Record<string, string> = { start, end };
+      if (defectType) detailParams.defect_type_cd = defectType;
+
       const [paretoRes, processRes, trendRes, detailRes] = await Promise.all([
         apiClient.get('/v1/reports/quality/pareto', { params: { start, end } }),
         apiClient.get('/v1/reports/quality/by-process', { params: { start, end } }),
         apiClient.get('/v1/reports/quality/trend', { params: { start, end } }),
-        apiClient.get('/v1/reports/quality/detail', { params: { start, end } }),
+        apiClient.get('/v1/reports/quality/detail', { params: detailParams }),
       ]);
 
       setParetoData(paretoRes.data.data ?? []);
@@ -126,7 +129,7 @@ export default function QualityReportPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = () => {
-    fetchAll(startDate, endDate);
+    fetchAll(startDate, endDate, defectTypeCd);
   };
 
   const handleReset = () => {
