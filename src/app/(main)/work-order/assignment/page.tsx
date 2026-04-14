@@ -61,7 +61,7 @@ export default function WorkOrderAssignmentPage() {
 
   const fetchWorkerAvailability = useCallback(async (woId: number) => {
     setAvailabilityLoading(true);
-    try { const res = await apiClient.get<WorkerAvailability[]>(`/v1/work-orders/${woId}/workers/availability`); setWorkerAvailability(res.data ?? []); }
+    try { const res = await apiClient.get<{ data: WorkerAvailability[] }>(`/v1/work-orders/${woId}/workers/availability`); setWorkerAvailability(res.data?.data ?? []); }
     catch { setWorkerAvailability([]); } finally { setAvailabilityLoading(false); }
   }, []);
 
