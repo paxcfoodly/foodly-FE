@@ -17,7 +17,7 @@ import PermissionButton from '@/components/auth/PermissionButton';
 import apiClient from '@/lib/apiClient';
 import type { ApiResponse } from '@/types';
 
-const MENU_URL = '/system/notification';
+const MENU_URL = '/system/notifications';
 
 /* ── Types ─────────────────────────────────────────── */
 
