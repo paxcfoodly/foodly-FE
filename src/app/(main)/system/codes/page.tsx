@@ -1,26 +1,17 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Button,
-  Space,
-  Tag,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Card,
-  Table,
-  message,
-  Spin,
-  Popconfirm,
-} from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-} from '@ant-design/icons';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
+import Tag from '@/components/ui/Tag';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import FormField from '@/components/ui/FormField';
+import Spinner from '@/components/ui/Spinner';
+import Table from '@/components/ui/Table';
+import toast from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm';
 import PermissionButton from '@/components/auth/PermissionButton';
 import FormModal, { type FormModalMode } from '@/components/common/FormModal';
 import apiClient from '@/lib/apiClient';
@@ -95,7 +86,7 @@ export default function CommonCodesPage() {
       const data = res.data.data;
       setGroups(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '코드그룹 목록 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '코드그룹 목록 조회에 실패했습니다.');
     } finally {
       setGroupLoading(false);
     }
@@ -112,7 +103,7 @@ export default function CommonCodesPage() {
       const codeList = (data as any).codes ?? [];
       setCodes(Array.isArray(codeList) ? codeList : []);
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '코드 목록 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '코드 목록 조회에 실패했습니다.');
       setCodes([]);
     } finally {
       setCodeLoading(false);
@@ -166,7 +157,7 @@ export default function CommonCodesPage() {
     if (!deleteGroupTarget) return;
     try {
       await apiClient.delete(`/v1/common-codes-admin/${deleteGroupTarget.group_cd}`);
-      message.success('코드그룹이 삭제되었습니다.');
+      toast.success('코드그룹이 삭제되었습니다.');
       setDeleteGroupTarget(null);
       if (selectedGroupCd === deleteGroupTarget.group_cd) {
         setSelectedGroupCd(null);
@@ -174,7 +165,7 @@ export default function CommonCodesPage() {
       }
       fetchGroups();
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
     }
   }, [deleteGroupTarget, selectedGroupCd, fetchGroups]);
 
@@ -232,11 +223,11 @@ export default function CommonCodesPage() {
         await apiClient.delete(
           `/v1/common-codes-admin/${selectedGroupCd}/codes/${record.code}`,
         );
-        message.success('코드가 삭제되었습니다.');
+        toast.success('코드가 삭제되었습니다.');
         fetchCodes(selectedGroupCd);
         fetchGroups();
       } catch (err: any) {
-        message.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
+        toast.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
       }
     },
     [selectedGroupCd, fetchCodes, fetchGroups],
@@ -264,7 +255,7 @@ export default function CommonCodesPage() {
         width: 70,
         align: 'center' as const,
         render: (val: unknown) => (
-          <Tag color={(val as string) === 'Y' ? 'green' : 'default'}>
+          <Tag color={(val as string) === 'Y' ? 'green' : 'gray'}>
             {(val as string) === 'Y' ? 'Y' : 'N'}
           </Tag>
         ),
@@ -275,37 +266,38 @@ export default function CommonCodesPage() {
         width: 120,
         align: 'center' as const,
         render: (_: unknown, record: CodeDetailRow) => (
-          <Space size={4}>
+          <div className="flex items-center gap-1 justify-center">
             <PermissionButton
               action="update"
               menuUrl={MENU_URL}
               fallback="hide"
               size="small"
-              type="text"
-              icon={<EditOutlined />}
+              variant="ghost"
+              icon={<Pencil className="w-4 h-4" />}
               onClick={() => handleCodeEdit(record)}
             >
               {''}
             </PermissionButton>
-            <Popconfirm
-              title="코드를 삭제하시겠습니까?"
-              onConfirm={() => handleCodeDelete(record)}
-              okText="삭제"
-              cancelText="취소"
+            <PermissionButton
+              action="delete"
+              menuUrl={MENU_URL}
+              fallback="hide"
+              size="small"
+              variant="danger"
+              icon={<Trash2 className="w-4 h-4" />}
+              onClick={() => {
+                confirm({
+                  title: '코드 삭제',
+                  content: '코드를 삭제하시겠습니까?',
+                  okText: '삭제',
+                  danger: true,
+                  onOk: () => handleCodeDelete(record),
+                });
+              }}
             >
-              <PermissionButton
-                action="delete"
-                menuUrl={MENU_URL}
-                fallback="hide"
-                size="small"
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              >
-                {''}
-              </PermissionButton>
-            </Popconfirm>
-          </Space>
+              {''}
+            </PermissionButton>
+          </div>
         ),
       },
     ],
@@ -314,52 +306,43 @@ export default function CommonCodesPage() {
 
   /* ── Render ─── */
   return (
-    <div style={{ display: 'flex', gap: 16, height: '100%' }}>
+    <div className="flex gap-4 h-full">
       {/* 좌측: 그룹코드 목록 */}
-      <Card
-        title="코드그룹"
-        style={{ width: 340, flexShrink: 0 }}
-        bodyStyle={{ padding: 0 }}
-        extra={
+      <div className="w-[340px] shrink-0 bg-white rounded-xl shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h3 className="text-base font-semibold text-gray-900">코드그룹</h3>
           <PermissionButton
             action="create"
             menuUrl={MENU_URL}
-            type="primary"
+            variant="primary"
             size="small"
-            icon={<PlusOutlined />}
+            icon={<Plus className="w-4 h-4" />}
             onClick={handleGroupCreate}
           >
             그룹 등록
           </PermissionButton>
-        }
-      >
-        <Spin spinning={groupLoading}>
-          <div style={{ maxHeight: 'calc(100vh - 260px)', overflowY: 'auto' }}>
+        </div>
+        <Spinner spinning={groupLoading}>
+          <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
             {groups.map((group) => (
               <div
                 key={group.group_cd}
                 onClick={() => setSelectedGroupCd(group.group_cd)}
-                style={{
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid #f0f0f0',
-                  backgroundColor: selectedGroupCd === group.group_cd ? '#e6f4ff' : undefined,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
+                className={`px-4 py-3 cursor-pointer border-b border-gray-50 flex justify-between items-center hover:bg-gray-50 ${
+                  selectedGroupCd === group.group_cd ? 'bg-blue-50' : ''
+                }`}
               >
                 <div>
-                  <div style={{ fontWeight: 500 }}>{group.group_nm}</div>
-                  <div style={{ fontSize: 12, color: '#999' }}>
+                  <div className="font-medium">{group.group_nm}</div>
+                  <div className="text-xs text-gray-400">
                     {group.group_cd}
                     {group._count && (
-                      <span style={{ marginLeft: 8 }}>코드 {group._count.codes}개</span>
+                      <span className="ml-2">코드 {group._count.codes}개</span>
                     )}
                   </div>
                 </div>
-                <Space size={4}>
-                  <Tag color={group.use_yn === 'Y' ? 'green' : 'default'}>
+                <div className="flex items-center gap-1">
+                  <Tag color={group.use_yn === 'Y' ? 'green' : 'gray'}>
                     {group.use_yn === 'Y' ? '사용' : '미사용'}
                   </Tag>
                   <PermissionButton
@@ -367,8 +350,8 @@ export default function CommonCodesPage() {
                     menuUrl={MENU_URL}
                     fallback="hide"
                     size="small"
-                    type="text"
-                    icon={<EditOutlined />}
+                    variant="ghost"
+                    icon={<Pencil className="w-4 h-4" />}
                     onClick={(e) => {
                       e?.stopPropagation();
                       handleGroupEdit(group);
@@ -381,9 +364,8 @@ export default function CommonCodesPage() {
                     menuUrl={MENU_URL}
                     fallback="hide"
                     size="small"
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
+                    variant="danger"
+                    icon={<Trash2 className="w-4 h-4" />}
                     onClick={(e) => {
                       e?.stopPropagation();
                       setDeleteGroupTarget(group);
@@ -391,57 +373,54 @@ export default function CommonCodesPage() {
                   >
                     {''}
                   </PermissionButton>
-                </Space>
+                </div>
               </div>
             ))}
             {groups.length === 0 && !groupLoading && (
-              <div style={{ padding: 24, textAlign: 'center', color: '#999' }}>
+              <div className="p-6 text-center text-gray-400">
                 등록된 코드그룹이 없습니다.
               </div>
             )}
           </div>
-        </Spin>
-      </Card>
+        </Spinner>
+      </div>
 
       {/* 우측: 상세코드 */}
-      <Card
-        title={
-          selectedGroupCd
-            ? `${groups.find((g) => g.group_cd === selectedGroupCd)?.group_nm ?? selectedGroupCd} 상세코드`
-            : '상세코드'
-        }
-        style={{ flex: 1, minWidth: 0 }}
-        extra={
-          selectedGroupCd && (
+      <div className="flex-1 min-w-0 bg-white rounded-xl shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h3 className="text-base font-semibold text-gray-900">
+            {selectedGroupCd
+              ? `${groups.find((g) => g.group_cd === selectedGroupCd)?.group_nm ?? selectedGroupCd} 상세코드`
+              : '상세코드'}
+          </h3>
+          {selectedGroupCd && (
             <PermissionButton
               action="create"
               menuUrl={MENU_URL}
-              type="primary"
+              variant="primary"
               size="small"
-              icon={<PlusOutlined />}
+              icon={<Plus className="w-4 h-4" />}
               onClick={handleCodeCreate}
             >
               코드 등록
             </PermissionButton>
-          )
-        }
-      >
-        {!selectedGroupCd ? (
-          <div style={{ textAlign: 'center', padding: 48, color: '#999' }}>
-            좌측에서 코드그룹을 선택해주세요.
-          </div>
-        ) : (
-          <Table
-            columns={codeColumns}
-            dataSource={codes}
-            rowKey="code"
-            loading={codeLoading}
-            pagination={false}
-            scroll={{ y: 'calc(100vh - 340px)' }}
-            size="small"
-          />
-        )}
-      </Card>
+          )}
+        </div>
+        <div className="p-6">
+          {!selectedGroupCd ? (
+            <div className="text-center py-12 text-gray-400">
+              좌측에서 코드그룹을 선택해주세요.
+            </div>
+          ) : (
+            <Table
+              columns={codeColumns}
+              dataSource={codes}
+              rowKey="code"
+              loading={codeLoading}
+            />
+          )}
+        </div>
+      </div>
 
       {/* 그룹 등록/수정 모달 */}
       <FormModal<GroupFormValues>
@@ -458,36 +437,41 @@ export default function CommonCodesPage() {
       >
         {(form, mode) => (
           <>
-            <Form.Item
-              name="group_cd"
-              label="그룹코드"
-              rules={[
-                { required: true, message: '그룹코드를 입력하세요.' },
-                { pattern: /^[A-Z_]+$/, message: '영문 대문자와 _만 사용 가능합니다.' },
-              ]}
-            >
+            <FormField label="그룹코드" required>
               <Input
+                name="group_cd"
                 placeholder="예: ITEM_TYPE"
                 disabled={mode === 'edit'}
                 maxLength={30}
+                required
+                pattern="^[A-Z_]+$"
+                title="영문 대문자와 _만 사용 가능합니다."
+                value={(form.getFieldsValue().group_cd as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ group_cd: e.target.value } as Partial<GroupFormValues>)}
               />
-            </Form.Item>
-            <Form.Item
-              name="group_nm"
-              label="그룹명"
-              rules={[{ required: true, message: '그룹명을 입력하세요.' }]}
-            >
-              <Input placeholder="그룹명" maxLength={50} />
-            </Form.Item>
+            </FormField>
+            <FormField label="그룹명" required>
+              <Input
+                name="group_nm"
+                placeholder="그룹명"
+                maxLength={50}
+                required
+                value={(form.getFieldsValue().group_nm as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ group_nm: e.target.value } as Partial<GroupFormValues>)}
+              />
+            </FormField>
             {mode === 'edit' && (
-              <Form.Item name="use_yn" label="사용여부">
+              <FormField label="사용여부">
                 <Select
+                  name="use_yn"
+                  value={(form.getFieldsValue().use_yn as string) ?? ''}
+                  onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<GroupFormValues>)}
                   options={[
                     { label: '사용', value: 'Y' },
                     { label: '미사용', value: 'N' },
                   ]}
                 />
-              </Form.Item>
+              </FormField>
             )}
           </>
         )}
@@ -508,36 +492,51 @@ export default function CommonCodesPage() {
       >
         {(form, mode) => (
           <>
-            <Form.Item
-              name="code"
-              label="코드"
-              rules={[{ required: true, message: '코드를 입력하세요.' }]}
-            >
+            <FormField label="코드" required>
               <Input
+                name="code"
                 placeholder="코드값"
                 disabled={mode === 'edit'}
                 maxLength={30}
+                required
+                value={(form.getFieldsValue().code as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ code: e.target.value } as Partial<CodeFormValues>)}
               />
-            </Form.Item>
-            <Form.Item
-              name="code_nm"
-              label="코드명"
-              rules={[{ required: true, message: '코드명을 입력하세요.' }]}
-            >
-              <Input placeholder="코드명" maxLength={50} />
-            </Form.Item>
-            <Form.Item name="sort_order" label="정렬순서">
-              <InputNumber placeholder="0" min={0} max={999} style={{ width: '100%' }} />
-            </Form.Item>
+            </FormField>
+            <FormField label="코드명" required>
+              <Input
+                name="code_nm"
+                placeholder="코드명"
+                maxLength={50}
+                required
+                value={(form.getFieldsValue().code_nm as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ code_nm: e.target.value } as Partial<CodeFormValues>)}
+              />
+            </FormField>
+            <FormField label="정렬순서">
+              <input
+                type="number"
+                name="sort_order"
+                placeholder="0"
+                min={0}
+                max={999}
+                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                value={(form.getFieldsValue().sort_order as number) ?? ''}
+                onChange={(e) => form.setFieldsValue({ sort_order: e.target.value ? Number(e.target.value) : undefined } as Partial<CodeFormValues>)}
+              />
+            </FormField>
             {mode === 'edit' && (
-              <Form.Item name="use_yn" label="사용여부">
+              <FormField label="사용여부">
                 <Select
+                  name="use_yn"
+                  value={(form.getFieldsValue().use_yn as string) ?? ''}
+                  onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<CodeFormValues>)}
                   options={[
                     { label: '사용', value: 'Y' },
                     { label: '미사용', value: 'N' },
                   ]}
                 />
-              </Form.Item>
+              </FormField>
             )}
           </>
         )}
@@ -547,17 +546,19 @@ export default function CommonCodesPage() {
       <Modal
         open={!!deleteGroupTarget}
         title="코드그룹 삭제"
-        onOk={handleGroupDelete}
-        onCancel={() => setDeleteGroupTarget(null)}
-        okText="삭제"
-        cancelText="취소"
-        okButtonProps={{ danger: true }}
+        onClose={() => setDeleteGroupTarget(null)}
+        footer={
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setDeleteGroupTarget(null)}>취소</Button>
+            <Button variant="danger" onClick={handleGroupDelete}>삭제</Button>
+          </div>
+        }
       >
         <p>
           <strong>{deleteGroupTarget?.group_nm}</strong> ({deleteGroupTarget?.group_cd}) 코드그룹을 삭제하시겠습니까?
         </p>
         {deleteGroupTarget?._count && deleteGroupTarget._count.codes > 0 && (
-          <p style={{ color: '#ff4d4f', fontSize: 13 }}>
+          <p className="text-red-500 text-[13px]">
             ※ 하위 코드가 {deleteGroupTarget._count.codes}개 존재하여 삭제가 거부될 수 있습니다.
           </p>
         )}

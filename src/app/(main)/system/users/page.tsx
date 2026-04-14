@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Space, Tag, Modal, Form, Input, Select, message } from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  KeyOutlined,
-} from '@ant-design/icons';
+import { Plus, Pencil, Trash2, KeyRound } from 'lucide-react';
+import Tag from '@/components/ui/Tag';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import FormField from '@/components/ui/FormField';
+import toast from '@/components/ui/toast';
 import DataGrid, { type DataGridColumn } from '@/components/common/DataGrid';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
 import FormModal, { type FormModalMode } from '@/components/common/FormModal';
@@ -129,7 +130,7 @@ export default function UsersPage() {
         setTotal(0);
       }
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '사용자 목록 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '사용자 목록 조회에 실패했습니다.');
       setDataSource([]);
     } finally {
       setLoading(false);
@@ -207,7 +208,7 @@ export default function UsersPage() {
         render: (val: unknown) => {
           const status = val as string;
           return (
-            <Tag color={status === 'ACTIVE' ? 'green' : 'default'}>
+            <Tag color={status === 'ACTIVE' ? 'green' : 'gray'}>
               {status === 'ACTIVE' ? '활성' : '비활성'}
             </Tag>
           );
@@ -229,13 +230,13 @@ export default function UsersPage() {
         width: 200,
         fixed: 'right' as const,
         render: (_: unknown, record: UserRow) => (
-          <Space size="small">
+          <div className="flex items-center gap-2">
             <PermissionButton
               action="update"
               menuUrl={MENU_URL}
               fallback="hide"
               size="small"
-              icon={<EditOutlined />}
+              icon={<Pencil className="w-4 h-4" />}
               onClick={() => handleEdit(record)}
             >
               수정
@@ -245,7 +246,7 @@ export default function UsersPage() {
               menuUrl={MENU_URL}
               fallback="hide"
               size="small"
-              icon={<KeyOutlined />}
+              icon={<KeyRound className="w-4 h-4" />}
               onClick={() => setResetTarget(record)}
             >
               비번초기화
@@ -256,14 +257,14 @@ export default function UsersPage() {
                 menuUrl={MENU_URL}
                 fallback="hide"
                 size="small"
-                danger
-                icon={<DeleteOutlined />}
+                variant="danger"
+                icon={<Trash2 className="w-4 h-4" />}
                 onClick={() => setDeleteTarget(record)}
               >
                 삭제
               </PermissionButton>
             )}
-          </Space>
+          </div>
         ),
       },
     ],
@@ -335,11 +336,11 @@ export default function UsersPage() {
     if (!deleteTarget) return;
     try {
       await apiClient.delete(`/v1/users/${deleteTarget.user_id}`);
-      message.success('사용자가 삭제(비활성화)되었습니다.');
+      toast.success('사용자가 삭제(비활성화)되었습니다.');
       setDeleteTarget(null);
       fetchUsers();
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
     }
   }, [deleteTarget, fetchUsers]);
 
@@ -348,37 +349,12 @@ export default function UsersPage() {
     if (!resetTarget) return;
     try {
       await apiClient.post(`/v1/users/${resetTarget.user_id}/reset-password`);
-      message.success(`${resetTarget.user_nm}님의 비밀번호가 초기화되었습니다.`);
+      toast.success(`${resetTarget.user_nm}님의 비밀번호가 초기화되었습니다.`);
       setResetTarget(null);
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '비밀번호 초기화에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '비밀번호 초기화에 실패했습니다.');
     }
   }, [resetTarget]);
-
-  /* ── Login ID duplicate check helper ─── */
-  const checkDuplicateLoginId = useCallback(
-    async (_: unknown, value: string) => {
-      if (!value || value.length < 2) return;
-      // Skip check in edit mode
-      if (modalMode === 'edit') return;
-      try {
-        const res = await apiClient.get<ApiResponse<UserRow[]>>('/v1/users', {
-          params: { login_id: value, limit: 1 },
-        });
-        const data = res.data.data;
-        const items = Array.isArray(data) ? data : (data as any)?.data ?? [];
-        if (items.length > 0 && items[0].login_id === value) {
-          throw new Error('이미 사용 중인 로그인 ID입니다.');
-        }
-      } catch (err: any) {
-        if (err.message === '이미 사용 중인 로그인 ID입니다.') {
-          return Promise.reject(err.message);
-        }
-        // API error → skip validation (server will catch on submit)
-      }
-    },
-    [modalMode],
-  );
 
   /* ── Form initial values ─── */
   const formInitialValues = useMemo(() => {
@@ -393,7 +369,7 @@ export default function UsersPage() {
 
   /* ── Render ─── */
   return (
-    <div style={{ padding: 0 }}>
+    <div>
       {/* 검색 영역 */}
       <SearchForm
         fields={searchFields}
@@ -404,8 +380,8 @@ export default function UsersPage() {
           <PermissionButton
             action="create"
             menuUrl={MENU_URL}
-            type="primary"
-            icon={<PlusOutlined />}
+            variant="primary"
+            icon={<Plus className="w-4 h-4" />}
             onClick={handleCreate}
           >
             사용자 등록
@@ -441,67 +417,70 @@ export default function UsersPage() {
       >
         {(form, mode) => (
           <>
-            <Form.Item
-              name="login_id"
-              label="로그인ID"
-              rules={[
-                { required: true, message: '로그인ID를 입력하세요.' },
-                { min: 2, message: '2자 이상 입력하세요.' },
-                ...(mode === 'create'
-                  ? [{ validator: checkDuplicateLoginId }]
-                  : []),
-              ]}
-            >
+            <FormField label="로그인ID" required>
               <Input
+                name="login_id"
                 placeholder="로그인ID"
                 disabled={mode === 'edit'}
                 maxLength={50}
+                required
+                minLength={2}
+                value={(form.getFieldsValue().login_id as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ login_id: e.target.value } as Partial<UserFormValues>)}
               />
-            </Form.Item>
+            </FormField>
 
-            <Form.Item
-              name="user_nm"
-              label="성명"
-              rules={[{ required: true, message: '성명을 입력하세요.' }]}
-            >
-              <Input placeholder="성명" maxLength={50} />
-            </Form.Item>
+            <FormField label="성명" required>
+              <Input
+                name="user_nm"
+                placeholder="성명"
+                maxLength={50}
+                required
+                value={(form.getFieldsValue().user_nm as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ user_nm: e.target.value } as Partial<UserFormValues>)}
+              />
+            </FormField>
 
             {mode === 'create' && (
-              <Form.Item
-                name="password"
-                label="비밀번호"
-                rules={[
-                  { required: true, message: '비밀번호를 입력하세요.' },
-                  { min: 6, message: '6자 이상 입력하세요.' },
-                ]}
-              >
-                <Input.Password placeholder="비밀번호 (6자 이상)" />
-              </Form.Item>
+              <FormField label="비밀번호" required>
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="비밀번호 (6자 이상)"
+                  required
+                  minLength={6}
+                  className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                  value={(form.getFieldsValue().password as string) ?? ''}
+                  onChange={(e) => form.setFieldsValue({ password: e.target.value } as Partial<UserFormValues>)}
+                />
+              </FormField>
             )}
 
-            <Form.Item name="role_cd" label="역할">
+            <FormField label="역할">
               <Select
+                name="role_cd"
                 placeholder="역할 선택"
-                allowClear
-                showSearch
-                optionFilterProp="label"
+                value={(form.getFieldsValue().role_cd as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ role_cd: e.target.value || null } as Partial<UserFormValues>)}
                 options={roleOptions.map((r) => ({
                   label: r.role_nm,
                   value: r.role_cd,
                 }))}
               />
-            </Form.Item>
+            </FormField>
 
             {mode === 'edit' && (
-              <Form.Item name="status" label="상태">
+              <FormField label="상태">
                 <Select
+                  name="status"
+                  value={(form.getFieldsValue().status as string) ?? ''}
+                  onChange={(e) => form.setFieldsValue({ status: e.target.value } as Partial<UserFormValues>)}
                   options={[
                     { label: '활성', value: 'ACTIVE' },
                     { label: '비활성', value: 'INACTIVE' },
                   ]}
                 />
-              </Form.Item>
+              </FormField>
             )}
           </>
         )}
@@ -511,17 +490,19 @@ export default function UsersPage() {
       <Modal
         open={!!deleteTarget}
         title="사용자 삭제"
-        onOk={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-        okText="삭제"
-        cancelText="취소"
-        okButtonProps={{ danger: true }}
+        onClose={() => setDeleteTarget(null)}
+        footer={
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setDeleteTarget(null)}>취소</Button>
+            <Button variant="danger" onClick={handleDelete}>삭제</Button>
+          </div>
+        }
       >
         <p>
           <strong>{deleteTarget?.user_nm}</strong> ({deleteTarget?.login_id})
           님을 삭제(비활성화)하시겠습니까?
         </p>
-        <p style={{ color: '#999', fontSize: 13 }}>
+        <p className="text-gray-400 text-[13px]">
           ※ 논리 삭제로 상태가 비활성으로 변경됩니다.
         </p>
       </Modal>
@@ -530,16 +511,19 @@ export default function UsersPage() {
       <Modal
         open={!!resetTarget}
         title="비밀번호 초기화"
-        onOk={handleResetPassword}
-        onCancel={() => setResetTarget(null)}
-        okText="초기화"
-        cancelText="취소"
+        onClose={() => setResetTarget(null)}
+        footer={
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setResetTarget(null)}>취소</Button>
+            <Button variant="primary" onClick={handleResetPassword}>초기화</Button>
+          </div>
+        }
       >
         <p>
           <strong>{resetTarget?.user_nm}</strong> ({resetTarget?.login_id})
           님의 비밀번호를 초기화하시겠습니까?
         </p>
-        <p style={{ color: '#999', fontSize: 13 }}>
+        <p className="text-gray-400 text-[13px]">
           ※ 기본 비밀번호(foodly1234!)로 초기화됩니다.
         </p>
       </Modal>

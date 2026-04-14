@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Spin } from 'antd';
+import Spinner from '@/components/ui/Spinner';
 import apiClient from '@/lib/apiClient';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
@@ -69,8 +69,8 @@ export default function StatusTimelineChart({
 
   if (loading) {
     return (
-      <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Spin size="small" />
+      <div className="h-20 flex items-center justify-center">
+        <Spinner size="small" />
       </div>
     );
   }

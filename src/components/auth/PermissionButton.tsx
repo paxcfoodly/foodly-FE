@@ -1,7 +1,7 @@
 'use client';
 
-import { Button } from 'antd';
-import type { ButtonProps } from 'antd';
+import { Button } from '@/components/ui';
+import type { ButtonProps } from '@/components/ui';
 import { usePermissionStore } from '@/stores/permissionStore';
 
 type PermissionAction = 'create' | 'update' | 'delete';

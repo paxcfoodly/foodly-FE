@@ -1,14 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Layout, Breadcrumb, theme } from 'antd';
-import { HomeOutlined } from '@ant-design/icons';
 import { usePathname } from 'next/navigation';
 import AppHeader from './AppHeader';
 import AppSider from './AppSider';
-import { pathLabelMap, pathToLabelMap } from '@/config/menuConfig';
-
-const { Content, Footer } = Layout;
+import { pathToLabelMap, pathLabelMap } from '@/config/menuConfig';
 
 const MOBILE_BREAKPOINT = 1280;
 
@@ -17,9 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { token } = theme.useToken();
 
-  // 반응형 감지: 1280px 이하 → 모바일/태블릿 모드
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < MOBILE_BREAKPOINT;
@@ -31,19 +25,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Breadcrumb 항목 생성 — full path 기반으로 정확한 라벨 매핑
+  // 현재 페이지 타이틀 추출
   const pathSegments = pathname.split('/').filter(Boolean);
-  const breadcrumbItems = [
-    { title: <HomeOutlined />, href: '/' },
-    ...pathSegments.map((seg, idx) => {
-      const fullPath = '/' + pathSegments.slice(0, idx + 1).join('/');
-      const label = pathToLabelMap[fullPath] || pathLabelMap[seg] || seg;
-      return { title: label, href: fullPath };
-    }),
-  ];
+  const fullPath = '/' + pathSegments.join('/');
+  const pageTitle = pathToLabelMap[fullPath] || pathLabelMap[pathSegments[pathSegments.length - 1]] || '';
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <div className="flex h-screen overflow-hidden">
+      {/* 좌측: 사이드바 */}
       <AppSider
         collapsed={collapsed}
         onCollapse={setCollapsed}
@@ -51,38 +40,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         mobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
       />
-      <Layout>
+
+      {/* 우측: 헤더 + 콘텐츠 */}
+      <div className="flex flex-col flex-1 overflow-hidden">
         <AppHeader
           collapsed={collapsed}
           onToggleCollapse={() => setCollapsed(!collapsed)}
           isMobile={isMobile}
           onMobileMenuOpen={() => setMobileMenuOpen(true)}
+          pageTitle={pageTitle}
         />
-        <Content
-          style={{
-            margin: 16,
-            padding: 24,
-            background: token.colorBgContainer,
-            borderRadius: token.borderRadius,
-            minHeight: 280,
-          }}
-        >
-          {pathSegments.length > 0 && (
-            <Breadcrumb items={breadcrumbItems} style={{ marginBottom: 16 }} />
-          )}
+
+        <main className="flex-1 overflow-auto p-6 bg-dark-900">
           {children}
-        </Content>
-        <Footer
-          style={{
-            textAlign: 'center',
-            padding: '12px 24px',
-            fontSize: 12,
-            color: token.colorTextSecondary,
-          }}
-        >
-          Foodly MES v0.1.0 · © 2026 Foodly
-        </Footer>
-      </Layout>
-    </Layout>
+        </main>
+      </div>
+    </div>
   );
 }

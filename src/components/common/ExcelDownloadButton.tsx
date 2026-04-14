@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Button, message } from 'antd';
-import { DownloadOutlined } from '@ant-design/icons';
+import { Download } from 'lucide-react';
+import Button from '@/components/ui/Button';
+import toast from '@/components/ui/toast';
 import apiClient from '@/lib/apiClient';
 
 /* ── Types ─────────────────────────────────────────── */
@@ -64,10 +65,10 @@ export default function ExcelDownloadButton({
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      message.success('엑셀 다운로드 완료');
+      toast.success('엑셀 다운로드 완료');
     } catch (err: any) {
       console.error('[ExcelDownloadButton]', err);
-      message.error(err?.message ?? '엑셀 다운로드에 실패했습니다.');
+      toast.error(err?.message ?? '엑셀 다운로드에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -75,7 +76,7 @@ export default function ExcelDownloadButton({
 
   return (
     <Button
-      icon={<DownloadOutlined />}
+      icon={<Download className="w-4 h-4" />}
       loading={loading}
       disabled={disabled}
       onClick={handleClick}

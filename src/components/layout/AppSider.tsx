@@ -1,13 +1,11 @@
 'use client';
 
-import { Layout, Menu, Drawer } from 'antd';
-import type { MenuProps } from 'antd';
+import { useState, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useMemo } from 'react';
-import { menuConfig, toAntdMenuItems, type MenuItem } from '@/config/menuConfig';
+import { ChevronDown } from 'lucide-react';
+import { Drawer } from '@/components/ui';
+import { menuConfig, type MenuItem } from '@/config/menuConfig';
 import { usePermissionStore } from '@/stores/permissionStore';
-
-const { Sider } = Layout;
 
 interface AppSiderProps {
   collapsed: boolean;
@@ -30,97 +28,141 @@ export default function AppSider({
   const hasMenuAccess = usePermissionStore((s) => s.hasMenuAccess);
   const permLoaded = usePermissionStore((s) => s.loaded);
 
-  // 권한에 따라 메뉴 필터링: canRead 있는 메뉴만 표시
+  // 권한에 따라 메뉴 필터링
   const filteredMenu = useMemo(() => {
-    if (!permLoaded) return []; // 권한 미로딩 시 빈 메뉴
+    if (!permLoaded) return [];
     return menuConfig.reduce<MenuItem[]>((acc, parent) => {
-      // 자식 메뉴 필터링
       const filteredChildren = parent.children?.filter(
         (child) => !child.path || hasMenuAccess(child.path),
       );
-      // 자식이 모두 필터링되면 대메뉴도 숨김
       if (filteredChildren && filteredChildren.length > 0) {
         acc.push({ ...parent, children: filteredChildren });
       } else if (!parent.children && hasMenuAccess(parent.path)) {
-        // 자식 없는 단독 메뉴
         acc.push(parent);
       }
       return acc;
     }, []);
   }, [permLoaded, hasMenuAccess]);
 
-  const antdMenuItems = useMemo(() => toAntdMenuItems(filteredMenu), [filteredMenu]);
-
-  // 현재 경로에서 선택된 메뉴 키 계산
   const selectedKey = pathname;
+  const defaultOpenKey = '/' + (pathname.split('/')[1] || 'dashboard');
 
-  // 현재 경로에서 열린 서브메뉴 키 계산 (대메뉴 path)
-  const openKey = '/' + (pathname.split('/')[1] || 'dashboard');
+  const [openKeys, setOpenKeys] = useState<Record<string, boolean>>({
+    [defaultOpenKey]: true,
+  });
 
-  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
-    router.push(key);
+  const toggleSubmenu = (key: string) => {
+    setOpenKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleItemClick = (path: string) => {
+    router.push(path);
     if (isMobile) onMobileClose();
   };
 
-  const menuContent = (
-    <Menu
-      theme="dark"
-      mode="inline"
-      selectedKeys={[selectedKey]}
-      defaultOpenKeys={[openKey]}
-      items={antdMenuItems}
-      onClick={handleMenuClick}
-      style={{ borderRight: 0 }}
-    />
+  const logoSection = (
+    <div className="h-16 flex items-center gap-2 px-5 border-b border-dark-500 shrink-0">
+      <span className="text-2xl font-bold text-cyan-accent">F</span>
+      {!collapsed && (
+        <span className="text-lg font-bold tracking-tight text-gray-900 whitespace-nowrap">
+          Foodly MES
+        </span>
+      )}
+    </div>
   );
 
-  // 모바일/태블릿: Drawer로 전환
+  const menuContent = (
+    <nav className="flex-1 overflow-auto py-4 space-y-1 px-3">
+      {filteredMenu.map((item) => {
+        const hasChildren = item.children && item.children.length > 0;
+        const isParentActive = pathname.startsWith(item.path);
+        const isOpen = openKeys[item.path] ?? isParentActive;
+
+        return (
+          <div key={item.id}>
+            <button
+              onClick={() => {
+                if (hasChildren) toggleSubmenu(item.path);
+                else handleItemClick(item.path);
+              }}
+              className={`
+                w-full flex items-center gap-3 rounded-lg text-sm font-medium transition-colors
+                ${collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'}
+                ${isParentActive && !hasChildren
+                  ? 'bg-cyan-accent/10 text-cyan-accent'
+                  : 'text-gray-500 hover:text-gray-800 hover:bg-dark-700'
+                }
+              `}
+              title={collapsed ? item.label : undefined}
+            >
+              <span className="shrink-0 w-5 h-5 flex items-center justify-center">
+                {item.icon}
+              </span>
+              {!collapsed && (
+                <>
+                  <span className="flex-1 text-left truncate">{item.label}</span>
+                  {hasChildren && (
+                    <ChevronDown
+                      className={`w-4 h-4 text-dark-400 transition-transform duration-200 ${
+                        isOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  )}
+                </>
+              )}
+            </button>
+
+            {hasChildren && !collapsed && isOpen && (
+              <div className="ml-4 mt-0.5 space-y-0.5">
+                {item.children!.map((child) => {
+                  const isActive = selectedKey === child.path;
+                  return (
+                    <button
+                      key={child.id}
+                      onClick={() => handleItemClick(child.path)}
+                      className={`
+                        w-full text-left text-sm rounded-lg px-3 py-2 pl-6 transition-colors truncate
+                        ${isActive
+                          ? 'bg-cyan-accent/10 text-cyan-accent font-medium'
+                          : 'text-gray-500 hover:text-gray-800 hover:bg-dark-700'
+                        }
+                      `}
+                    >
+                      {child.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
+
+  // 모바일: Drawer
   if (isMobile) {
     return (
-      <Drawer
-        placement="left"
-        open={mobileOpen}
-        onClose={onMobileClose}
-        styles={{ body: { padding: 0, background: '#001529' }, wrapper: { width: 256 } }}
-        closable={false}
-      >
-        <div
-          style={{
-            height: 56,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            fontSize: 16,
-            fontWeight: 700,
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
-          }}
-        >
-          🍽️ Foodly MES
+      <Drawer placement="left" open={mobileOpen} onClose={onMobileClose} width={240}>
+        <div className="-m-6">
+          {logoSection}
+          {menuContent}
         </div>
-        {menuContent}
       </Drawer>
     );
   }
 
-  // 데스크톱: 고정 Sider
+  // 데스크톱: 고정 사이드바
   return (
-    <Sider
-      collapsible
-      collapsed={collapsed}
-      onCollapse={onCollapse}
-      trigger={null}
-      width={240}
-      collapsedWidth={64}
-      style={{
-        overflow: 'auto',
-        height: '100vh',
-        position: 'sticky',
-        top: 0,
-        left: 0,
-      }}
+    <aside
+      className={`
+        ${collapsed ? 'w-16' : 'w-60'}
+        bg-dark-800 border-r border-dark-500 flex flex-col shrink-0
+        transition-all duration-200 overflow-hidden
+      `}
     >
+      {logoSection}
       {menuContent}
-    </Sider>
+    </aside>
   );
 }

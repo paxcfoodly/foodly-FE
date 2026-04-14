@@ -2,30 +2,24 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Button,
-  Space,
-  Tag,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Table,
-  Tabs,
-  Tree,
-  message,
-  Popconfirm,
-  Card,
-} from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  HistoryOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
-import type { TablePaginationConfig } from 'antd/es/table';
-import type { SorterResult } from 'antd/es/table/interface';
-import type { DataNode } from 'antd/es/tree';
+  Plus,
+  Pencil,
+  Trash2,
+  History,
+  Search,
+  ChevronRight,
+  ChevronDown,
+} from 'lucide-react';
+import Button from '@/components/ui/Button';
+import Tag from '@/components/ui/Tag';
+import Tabs from '@/components/ui/Tabs';
+import Table from '@/components/ui/Table';
+import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
+import toast from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm';
+import FormField from '@/components/ui/FormField';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
 import FormModal, { type FormModalMode } from '@/components/common/FormModal';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
@@ -80,6 +74,14 @@ interface TreeRow {
 interface ItemOption {
   item_cd: string;
   item_nm: string;
+  [key: string]: unknown;
+}
+
+interface TreeNode {
+  key: string;
+  title: string;
+  children: TreeNode[];
+  level: number;
 }
 
 const MENU_URL = '/master/bom';
@@ -108,26 +110,20 @@ const PARENT_SEARCH_FIELDS: SearchFieldDef[] = [
 ];
 
 /* ── Tree data helpers ─── */
-function buildTreeData(rows: TreeRow[]): DataNode[] {
+function buildTreeData(rows: TreeRow[]): TreeNode[] {
   if (!rows || rows.length === 0) return [];
 
-  // Build a nested tree from flat rows with tree_level
-  interface TreeBuildNode extends DataNode {
-    level: number;
-  }
-
-  const root: DataNode[] = [];
-  const stack: TreeBuildNode[] = [];
+  const root: TreeNode[] = [];
+  const stack: TreeNode[] = [];
 
   for (const row of rows) {
-    const node: TreeBuildNode = {
+    const node: TreeNode = {
       key: `${row.bom_id}-${row.child_item_cd}-${row.tree_level}`,
       title: `${row.child_item_cd} - ${row.child_item_nm ?? ''} (수량: ${row.qty})`,
       children: [],
       level: row.tree_level,
     };
 
-    // Pop stack until we find the parent level
     while (stack.length > 0 && stack[stack.length - 1].level >= row.tree_level) {
       stack.pop();
     }
@@ -136,14 +132,46 @@ function buildTreeData(rows: TreeRow[]): DataNode[] {
       root.push(node);
     } else {
       const parent = stack[stack.length - 1];
-      if (!parent.children) parent.children = [];
-      (parent.children as TreeBuildNode[]).push(node);
+      parent.children.push(node);
     }
 
     stack.push(node);
   }
 
   return root;
+}
+
+/* ── Simple tree renderer ─── */
+function SimpleTree({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number }) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    const expand = (ns: TreeNode[]) => {
+      ns.forEach((n) => { init[n.key] = true; expand(n.children); });
+    };
+    expand(nodes);
+    return init;
+  });
+
+  return (
+    <div style={{ paddingLeft: depth > 0 ? 20 : 0 }}>
+      {nodes.map((node) => (
+        <div key={node.key}>
+          <div
+            className="flex items-center gap-1 py-1 text-sm cursor-pointer hover:bg-dark-700 rounded px-1"
+            onClick={() => setExpanded((prev) => ({ ...prev, [node.key]: !prev[node.key] }))}
+          >
+            {node.children.length > 0 ? (
+              expanded[node.key] ? <ChevronDown className="w-3 h-3 text-gray-400" /> : <ChevronRight className="w-3 h-3 text-gray-400" />
+            ) : <span className="w-3" />}
+            <span>{node.title}</span>
+          </div>
+          {expanded[node.key] && node.children.length > 0 && (
+            <SimpleTree nodes={node.children} depth={depth + 1} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /* ── Component ─────────────────────────────────────── */
@@ -169,8 +197,8 @@ export default function BomMasterPage() {
 
   /* ── Tree state ─── */
   const [activeTreeTab, setActiveTreeTab] = useState<string>('forward');
-  const [forwardTree, setForwardTree] = useState<DataNode[]>([]);
-  const [reverseTree, setReverseTree] = useState<DataNode[]>([]);
+  const [forwardTree, setForwardTree] = useState<TreeNode[]>([]);
+  const [reverseTree, setReverseTree] = useState<TreeNode[]>([]);
   const [treeLoading, setTreeLoading] = useState(false);
 
   /* ── History state ─── */
@@ -190,7 +218,7 @@ export default function BomMasterPage() {
       const res = await apiClient.get<PaginatedResponse<ItemOption>>('/v1/items', { params });
       setParentItems(res.data.data ?? []);
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '품목 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '품목 조회에 실패했습니다.');
     } finally {
       setParentLoading(false);
     }
@@ -239,7 +267,7 @@ export default function BomMasterPage() {
           });
         }
       } catch (err: any) {
-        message.error(err?.response?.data?.message ?? 'BOM 목록 조회에 실패했습니다.');
+        toast.error(err?.response?.data?.message ?? 'BOM 목록 조회에 실패했습니다.');
       } finally {
         setLoading(false);
       }
@@ -247,7 +275,6 @@ export default function BomMasterPage() {
     [pagination.page, pagination.pageSize, selectedParentItemCd],
   );
 
-  // Fetch BOMs when parent changes
   useEffect(() => {
     if (selectedParentItemCd) {
       fetchBomList(1, pagination.pageSize, sortField, sortOrder, selectedParentItemCd);
@@ -266,7 +293,7 @@ export default function BomMasterPage() {
       const rows: TreeRow[] = res.data?.data ?? [];
       setForwardTree(buildTreeData(rows));
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '정전개 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '정전개 조회에 실패했습니다.');
     } finally {
       setTreeLoading(false);
     }
@@ -279,13 +306,12 @@ export default function BomMasterPage() {
       const rows: TreeRow[] = res.data?.data ?? [];
       setReverseTree(buildTreeData(rows));
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '역전개 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '역전개 조회에 실패했습니다.');
     } finally {
       setTreeLoading(false);
     }
   }, []);
 
-  // Fetch tree on tab switch
   const handleTreeTabChange = useCallback(
     (key: string) => {
       setActiveTreeTab(key);
@@ -299,7 +325,6 @@ export default function BomMasterPage() {
     [selectedParentItemCd, fetchForwardTree, fetchReverseTree],
   );
 
-  // Also fetch tree when parent item changes and a tree tab is active
   useEffect(() => {
     if (!selectedParentItemCd) return;
     if (activeTreeTab === 'forward') {
@@ -310,36 +335,28 @@ export default function BomMasterPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedParentItemCd]);
 
-  /* ── Table change (pagination + sort) ─── */
-  const handleTableChange = useCallback(
-    (
-      paginationConfig: TablePaginationConfig,
-      _filters: Record<string, unknown>,
-      sorter: SorterResult<BomRow> | SorterResult<BomRow>[],
-    ) => {
-      const newPage = paginationConfig.current ?? 1;
-      const newPageSize = paginationConfig.pageSize ?? 20;
-
-      let newSortField: string | undefined;
-      let newSortOrder: 'asc' | 'desc' | undefined;
-
-      if (!Array.isArray(sorter) && sorter.field && sorter.order) {
-        newSortField = sorter.field as string;
-        newSortOrder = sorter.order === 'ascend' ? 'asc' : 'desc';
-      }
-
-      setSortField(newSortField);
-      setSortOrder(newSortOrder);
-      setPagination((prev) => ({ ...prev, page: newPage, pageSize: newPageSize }));
-      fetchBomList(newPage, newPageSize, newSortField, newSortOrder);
+  /* ── Sort / Page change ─── */
+  const handleSortChange = useCallback(
+    (field: string, order: 'asc' | 'desc') => {
+      setSortField(field);
+      setSortOrder(order);
+      fetchBomList(pagination.page, pagination.pageSize, field, order);
     },
-    [fetchBomList],
+    [fetchBomList, pagination.page, pagination.pageSize],
+  );
+
+  const handlePageChange = useCallback(
+    (page: number, pageSize: number) => {
+      setPagination((prev) => ({ ...prev, page, pageSize }));
+      fetchBomList(page, pageSize, sortField, sortOrder);
+    },
+    [fetchBomList, sortField, sortOrder],
   );
 
   /* ── CRUD handlers ─── */
   const handleCreate = useCallback(() => {
     if (!selectedParentItemCd) {
-      message.warning('모품목을 먼저 선택하세요.');
+      toast.warning('모품목을 먼저 선택하세요.');
       return;
     }
     setEditRecord(null);
@@ -376,7 +393,6 @@ export default function BomMasterPage() {
         });
       }
       fetchBomList(pagination.page, pagination.pageSize, sortField, sortOrder);
-      // Also refresh tree
       if (selectedParentItemCd) {
         if (activeTreeTab === 'forward') fetchForwardTree(selectedParentItemCd);
         else fetchReverseTree(selectedParentItemCd);
@@ -400,16 +416,15 @@ export default function BomMasterPage() {
     async (record: BomRow) => {
       try {
         await apiClient.delete(`/v1/boms/${record.bom_id}`);
-        message.success('BOM이 삭제되었습니다.');
+        toast.success('BOM이 삭제되었습니다.');
         fetchBomList(pagination.page, pagination.pageSize, sortField, sortOrder);
-        // Refresh tree
         if (selectedParentItemCd) {
           if (activeTreeTab === 'forward') fetchForwardTree(selectedParentItemCd);
           else fetchReverseTree(selectedParentItemCd);
         }
       } catch (err: any) {
         const msg = err?.response?.data?.message ?? '삭제에 실패했습니다.';
-        message.error(msg);
+        toast.error(msg);
       }
     },
     [
@@ -457,18 +472,13 @@ export default function BomMasterPage() {
   }, [editRecord, selectedParentItemCd]);
 
   /* ── Table columns ─── */
-  const columns = useMemo(
+  const columns: TableColumn<BomRow>[] = useMemo(
     () => [
-      {
-        title: '자품목코드',
-        dataIndex: 'child_item_cd',
-        width: 130,
-        sorter: true,
-        ellipsis: true,
-      },
+      { title: '자품목코드', dataIndex: 'child_item_cd', width: 130, sorter: true, ellipsis: true },
       {
         title: '자품목명',
-        dataIndex: ['child_item', 'item_nm'],
+        dataIndex: 'child_item_cd',
+        key: 'child_item_nm',
         width: 200,
         ellipsis: true,
         render: (_: unknown, record: BomRow) => record.child_item?.item_nm ?? '-',
@@ -477,22 +487,16 @@ export default function BomMasterPage() {
         title: '소요량',
         dataIndex: 'qty',
         width: 100,
-        align: 'right' as const,
+        align: 'right',
         sorter: true,
-        render: (val: unknown) => {
-          if (val == null) return '-';
-          return Number(val).toLocaleString();
-        },
+        render: (val: unknown) => val != null ? Number(val).toLocaleString() : '-',
       },
       {
         title: '손실률(%)',
         dataIndex: 'loss_rate',
         width: 100,
-        align: 'right' as const,
-        render: (val: unknown) => {
-          if (val == null) return '-';
-          return `${Number(val)}%`;
-        },
+        align: 'right',
+        render: (val: unknown) => val != null ? `${Number(val)}%` : '-',
       },
       {
         title: '대체품목',
@@ -512,7 +516,7 @@ export default function BomMasterPage() {
         title: '사용여부',
         dataIndex: 'use_yn',
         width: 80,
-        align: 'center' as const,
+        align: 'center',
         render: (val: unknown) => (
           <Tag color={(val as string) === 'Y' ? 'green' : 'default'}>
             {(val as string) === 'Y' ? '사용' : '미사용'}
@@ -523,47 +527,47 @@ export default function BomMasterPage() {
         title: '관리',
         dataIndex: '_action',
         width: 130,
-        align: 'center' as const,
-        fixed: 'right' as const,
+        align: 'center',
         render: (_: unknown, record: BomRow) => (
-          <Space size={4}>
+          <div className="flex items-center gap-1">
             <PermissionButton
               action="update"
               menuUrl={MENU_URL}
               fallback="hide"
               size="small"
-              type="text"
-              icon={<EditOutlined />}
+              variant="ghost"
+              icon={<Pencil className="w-4 h-4" />}
               onClick={() => handleEdit(record)}
             >
               {''}
             </PermissionButton>
-            <Popconfirm
-              title="BOM을 삭제하시겠습니까?"
-              description="다른 데이터에서 참조 중인 경우 삭제가 거부됩니다."
-              onConfirm={() => handleDelete(record)}
-              okText="삭제"
-              cancelText="취소"
+            <PermissionButton
+              action="delete"
+              menuUrl={MENU_URL}
+              fallback="hide"
+              size="small"
+              variant="ghost"
+              className="text-red-500"
+              icon={<Trash2 className="w-4 h-4" />}
+              onClick={() =>
+                confirm({
+                  title: 'BOM을 삭제하시겠습니까?',
+                  content: '다른 데이터에서 참조 중인 경우 삭제가 거부됩니다.',
+                  onOk: () => handleDelete(record),
+                  okText: '삭제',
+                  danger: true,
+                })
+              }
             >
-              <PermissionButton
-                action="delete"
-                menuUrl={MENU_URL}
-                fallback="hide"
-                size="small"
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              >
-                {''}
-              </PermissionButton>
-            </Popconfirm>
+              {''}
+            </PermissionButton>
             <Button
               size="small"
-              type="text"
-              icon={<HistoryOutlined />}
+              variant="ghost"
+              icon={<History className="w-4 h-4" />}
               onClick={() => handleHistory(record)}
             />
-          </Space>
+          </div>
         ),
       },
     ],
@@ -571,29 +575,20 @@ export default function BomMasterPage() {
   );
 
   /* ── Parent item table columns ─── */
-  const parentItemColumns = useMemo(
+  const parentItemColumns: TableColumn<ItemOption>[] = useMemo(
     () => [
-      {
-        title: '품목코드',
-        dataIndex: 'item_cd',
-        width: 130,
-        ellipsis: true,
-      },
-      {
-        title: '품목명',
-        dataIndex: 'item_nm',
-        width: 200,
-        ellipsis: true,
-      },
+      { title: '품목코드', dataIndex: 'item_cd', width: 130, ellipsis: true },
+      { title: '품목명', dataIndex: 'item_nm', width: 200, ellipsis: true },
       {
         title: '선택',
+        dataIndex: '_action',
         width: 80,
-        align: 'center' as const,
+        align: 'center',
         render: (_: unknown, record: ItemOption) => (
           <Button
             size="small"
-            type="primary"
-            icon={<SearchOutlined />}
+            variant="primary"
+            icon={<Search className="w-4 h-4" />}
             onClick={() => handleSelectParent(record)}
           >
             선택
@@ -604,6 +599,18 @@ export default function BomMasterPage() {
     [handleSelectParent],
   );
 
+  /* ── Pagination config ─── */
+  const paginationConfig: PaginationConfig = useMemo(
+    () => ({
+      current: pagination.page,
+      pageSize: pagination.pageSize,
+      total: pagination.total,
+      onChange: handlePageChange,
+      pageSizeOptions: [10, 20, 50, 100],
+    }),
+    [pagination, handlePageChange],
+  );
+
   /* ── Tree tab items ─── */
   const treeTabItems = useMemo(
     () => [
@@ -611,22 +618,13 @@ export default function BomMasterPage() {
         key: 'forward',
         label: '정전개 (Forward)',
         children: (
-          <div style={{ minHeight: 200, padding: '8px 0' }}>
+          <div className="min-h-[200px] py-2">
             {!selectedParentItemCd ? (
-              <div style={{ color: '#999', textAlign: 'center', paddingTop: 40 }}>
-                모품목을 선택하세요.
-              </div>
+              <div className="text-gray-400 text-center pt-10">모품목을 선택하세요.</div>
             ) : forwardTree.length === 0 ? (
-              <div style={{ color: '#999', textAlign: 'center', paddingTop: 40 }}>
-                전개 데이터가 없습니다.
-              </div>
+              <div className="text-gray-400 text-center pt-10">전개 데이터가 없습니다.</div>
             ) : (
-              <Tree
-                treeData={forwardTree}
-                defaultExpandAll
-                showLine
-                selectable={false}
-              />
+              <SimpleTree nodes={forwardTree} />
             )}
           </div>
         ),
@@ -635,22 +633,13 @@ export default function BomMasterPage() {
         key: 'reverse',
         label: '역전개 (Reverse)',
         children: (
-          <div style={{ minHeight: 200, padding: '8px 0' }}>
+          <div className="min-h-[200px] py-2">
             {!selectedParentItemCd ? (
-              <div style={{ color: '#999', textAlign: 'center', paddingTop: 40 }}>
-                품목을 선택하세요.
-              </div>
+              <div className="text-gray-400 text-center pt-10">품목을 선택하세요.</div>
             ) : reverseTree.length === 0 ? (
-              <div style={{ color: '#999', textAlign: 'center', paddingTop: 40 }}>
-                역전개 데이터가 없습니다.
-              </div>
+              <div className="text-gray-400 text-center pt-10">역전개 데이터가 없습니다.</div>
             ) : (
-              <Tree
-                treeData={reverseTree}
-                defaultExpandAll
-                showLine
-                selectable={false}
-              />
+              <SimpleTree nodes={reverseTree} />
             )}
           </div>
         ),
@@ -663,25 +652,22 @@ export default function BomMasterPage() {
   return (
     <div>
       {/* Parent Item Selector */}
-      <Card
-        title="모품목 선택"
-        size="small"
-        style={{ marginBottom: 16 }}
-        extra={
-          selectedParentItemCd && (
-            <Tag color="blue" style={{ fontSize: 13 }}>
+      <div className="border border-gray-200 rounded-lg p-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">모품목 선택</h3>
+          {selectedParentItemCd && (
+            <Tag color="blue" className="text-sm">
               선택: {selectedParentItemNm}
             </Tag>
-          )
-        }
-      >
+          )}
+        </div>
         <SearchForm
           fields={PARENT_SEARCH_FIELDS}
           onSearch={handleParentSearch}
           onReset={() => setParentItems([])}
           loading={parentLoading}
           extraButtons={
-            <Space>
+            <div className="flex items-center gap-2">
               <ExcelUploadButton
                 uploadUrl="/v1/boms/import"
                 onComplete={() =>
@@ -693,38 +679,37 @@ export default function BomMasterPage() {
                 columns={EXCEL_COLUMNS}
                 data={fetchExcelData}
               />
-            </Space>
+            </div>
           }
         />
         {parentItems.length > 0 && (
-          <Table
-            columns={parentItemColumns}
-            dataSource={parentItems}
-            rowKey="item_cd"
-            size="small"
-            pagination={false}
-            scroll={{ y: 200 }}
-            style={{ marginTop: 8 }}
-          />
+          <div className="mt-2">
+            <Table<ItemOption>
+              columns={parentItemColumns}
+              dataSource={parentItems}
+              rowKey="item_cd"
+              scrollX={400}
+            />
+          </div>
         )}
-      </Card>
+      </div>
 
       {/* BOM Detail Table */}
-      <Card
-        title={`BOM 상세 ${selectedParentItemCd ? `(${selectedParentItemNm})` : ''}`}
-        size="small"
-        style={{ marginBottom: 16 }}
-      >
+      <div className="border border-gray-200 rounded-lg p-4 mb-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">
+          BOM 상세 {selectedParentItemCd ? `(${selectedParentItemNm})` : ''}
+        </h3>
+
         {/* Toolbar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <span style={{ color: '#666', fontSize: 13 }}>
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-gray-500 text-sm">
             총 <strong>{pagination.total.toLocaleString()}</strong>건
           </span>
           <PermissionButton
             action="create"
             menuUrl={MENU_URL}
-            type="primary"
-            icon={<PlusOutlined />}
+            variant="primary"
+            icon={<Plus className="w-4 h-4" />}
             onClick={handleCreate}
           >
             BOM 등록
@@ -736,34 +721,26 @@ export default function BomMasterPage() {
           dataSource={bomList}
           rowKey="bom_id"
           loading={loading}
-          size="small"
-          scroll={{ x: 1000 }}
-          pagination={{
-            current: pagination.page,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            pageSizeOptions: ['10', '20', '50', '100'],
-            showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}건`,
-          }}
-          onChange={handleTableChange as any}
+          pagination={paginationConfig}
+          sortBy={sortField}
+          sortOrder={sortOrder}
+          onSortChange={handleSortChange}
+          scrollX={1000}
         />
-      </Card>
+      </div>
 
       {/* Tree View */}
-      <Card title="BOM 전개" size="small">
+      <div className="border border-gray-200 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">BOM 전개</h3>
         <Tabs
           activeKey={activeTreeTab}
           onChange={handleTreeTabChange}
           items={treeTabItems}
         />
         {treeLoading && (
-          <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>
-            로딩 중...
-          </div>
+          <div className="text-center py-5 text-gray-400">로딩 중...</div>
         )}
-      </Card>
+      </div>
 
       {/* Create/Edit Modal */}
       <FormModal<BomFormValues>
@@ -780,75 +757,77 @@ export default function BomMasterPage() {
       >
         {(form, mode) => (
           <>
-            <Form.Item
-              name="parent_item_cd"
-              label="모품목코드"
-            >
-              <Input disabled />
-            </Form.Item>
-            <Form.Item
-              name="child_item_cd"
-              label="자품목코드"
-              rules={[
-                { required: true, message: '자품목코드를 입력하세요.' },
-                { max: 30, message: '최대 30자까지 입력 가능합니다.' },
-              ]}
-            >
+            <FormField label="모품목코드">
               <Input
+                name="parent_item_cd"
+                disabled
+                defaultValue={form.getFieldsValue().parent_item_cd ?? ''}
+              />
+            </FormField>
+            <FormField label="자품목코드" required>
+              <Input
+                name="child_item_cd"
                 placeholder="자품목코드 입력"
                 disabled={mode === 'edit'}
                 maxLength={30}
+                required
+                defaultValue={form.getFieldsValue().child_item_cd ?? ''}
+                onChange={(e) => form.setFieldsValue({ child_item_cd: e.target.value } as Partial<BomFormValues>)}
               />
-            </Form.Item>
-            <Form.Item
-              name="qty"
-              label="소요량"
-              rules={[
-                { required: true, message: '소요량을 입력하세요.' },
-                {
-                  type: 'number',
-                  min: 0.001,
-                  message: '0보다 큰 값을 입력하세요.',
-                },
-              ]}
-            >
-              <InputNumber
+            </FormField>
+            <FormField label="소요량" required>
+              <input
+                type="number"
+                name="qty"
                 placeholder="소요량"
                 min={0.001}
-                style={{ width: '100%' }}
-                precision={3}
+                step={0.001}
+                required
+                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                defaultValue={form.getFieldsValue().qty ?? ''}
+                onChange={(e) => form.setFieldsValue({ qty: Number(e.target.value) } as Partial<BomFormValues>)}
               />
-            </Form.Item>
-            <Form.Item
-              name="loss_rate"
-              label="손실률(%)"
-              rules={[
-                {
-                  type: 'number',
-                  min: 0,
-                  max: 100,
-                  message: '0~100 사이의 값을 입력하세요.',
-                },
-              ]}
-            >
-              <InputNumber
+            </FormField>
+            <FormField label="손실률(%)">
+              <input
+                type="number"
+                name="loss_rate"
                 placeholder="손실률"
                 min={0}
                 max={100}
-                style={{ width: '100%' }}
-                precision={2}
+                step={0.01}
+                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                defaultValue={form.getFieldsValue().loss_rate ?? ''}
+                onChange={(e) => form.setFieldsValue({ loss_rate: e.target.value ? Number(e.target.value) : undefined } as Partial<BomFormValues>)}
               />
-            </Form.Item>
-            <Form.Item name="alt_item_cd" label="대체품목">
-              <Input placeholder="대체품목코드 입력" maxLength={30} />
-            </Form.Item>
-            <Form.Item name="process_cd" label="공정코드">
-              <Input placeholder="공정코드 입력" maxLength={20} />
-            </Form.Item>
+            </FormField>
+            <FormField label="대체품목">
+              <Input
+                name="alt_item_cd"
+                placeholder="대체품목코드 입력"
+                maxLength={30}
+                defaultValue={form.getFieldsValue().alt_item_cd ?? ''}
+                onChange={(e) => form.setFieldsValue({ alt_item_cd: e.target.value } as Partial<BomFormValues>)}
+              />
+            </FormField>
+            <FormField label="공정코드">
+              <Input
+                name="process_cd"
+                placeholder="공정코드 입력"
+                maxLength={20}
+                defaultValue={form.getFieldsValue().process_cd ?? ''}
+                onChange={(e) => form.setFieldsValue({ process_cd: e.target.value } as Partial<BomFormValues>)}
+              />
+            </FormField>
             {mode === 'edit' && (
-              <Form.Item name="use_yn" label="사용여부">
-                <Select options={USE_YN_OPTIONS} />
-              </Form.Item>
+              <FormField label="사용여부">
+                <Select
+                  name="use_yn"
+                  options={USE_YN_OPTIONS}
+                  defaultValue={form.getFieldsValue().use_yn ?? 'Y'}
+                  onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<BomFormValues>)}
+                />
+              </FormField>
             )}
           </>
         )}

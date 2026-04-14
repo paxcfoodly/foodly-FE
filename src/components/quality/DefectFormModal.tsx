@@ -1,23 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Button,
-  Space,
-  Tag,
-  Table,
-  Image,
-  message,
-  Divider,
-} from 'antd';
-import type { UploadFile } from 'antd/es/upload';
-import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined } from '@ant-design/icons';
+import { Trash2 } from 'lucide-react';
+import { Button, Modal, Tag } from '@/components/ui';
+import toast from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm';
 import CommonCodeSelect from '@/components/common/CommonCodeSelect';
 import FileUpload from '@/components/common/FileUpload';
 import apiClient from '@/lib/apiClient';
@@ -83,40 +70,6 @@ const DISPOSE_TYPE_COLOR: Record<string, string> = {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api';
 
-/* ── Disposal history columns ────────────────────────── */
-
-const disposalColumns: ColumnsType<DisposalRow> = [
-  {
-    title: '처리유형',
-    dataIndex: 'dispose_type',
-    width: 100,
-    render: (val: string) => (
-      <Tag color={DISPOSE_TYPE_COLOR[val] ?? 'default'}>
-        {DISPOSE_TYPE_LABEL[val] ?? val}
-      </Tag>
-    ),
-  },
-  {
-    title: '처리수량',
-    dataIndex: 'dispose_qty',
-    width: 90,
-    align: 'right',
-    render: (val: number) => val?.toLocaleString() ?? '-',
-  },
-  {
-    title: '승인자',
-    dataIndex: 'approve_by',
-    width: 100,
-    render: (val: unknown) => (val as string) || '-',
-  },
-  {
-    title: '처리일시',
-    dataIndex: 'create_dt',
-    width: 160,
-    render: (val: string) => (val ? new Date(val).toLocaleString('ko-KR') : '-'),
-  },
-];
-
 /* ── Component ──────────────────────────────────────── */
 
 export default function DefectFormModal({
@@ -127,10 +80,19 @@ export default function DefectFormModal({
   onSaved,
   onDisposeOpen,
 }: DefectFormModalProps) {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [fileList, setFileList] = useState<Array<{ uid: string; name: string; url?: string; thumbUrl?: string }>>([]);
   const [uploadedFileId, setUploadedFileId] = useState<number | null>(null);
+
+  /* Form state */
+  const [formLotNo, setFormLotNo] = useState('');
+  const [formItemCd, setFormItemCd] = useState('');
+  const [formProcessCd, setFormProcessCd] = useState('');
+  const [formDefectTypeCd, setFormDefectTypeCd] = useState('');
+  const [formDefectCauseCd, setFormDefectCauseCd] = useState('');
+  const [formDefectQty, setFormDefectQty] = useState<string>('');
+  const [formRemark, setFormRemark] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isView = mode === 'view';
   const title = isView ? '불량 상세' : '불량 등록';
@@ -139,74 +101,83 @@ export default function DefectFormModal({
   useEffect(() => {
     if (open) {
       if (mode === 'create') {
-        form.resetFields();
+        setFormLotNo('');
+        setFormItemCd('');
+        setFormProcessCd('');
+        setFormDefectTypeCd('');
+        setFormDefectCauseCd('');
+        setFormDefectQty('');
+        setFormRemark('');
         setFileList([]);
         setUploadedFileId(null);
+        setErrors({});
       } else if (record) {
-        form.setFieldsValue({
-          lot_no: record.lot_no ?? '',
-          item_cd: record.item_cd ?? '',
-          process_cd: record.process_cd ?? '',
-          defect_type_cd: record.defect_type_cd ?? '',
-          defect_cause_cd: record.defect_cause_cd ?? '',
-          defect_qty: record.defect_qty,
-          remark: record.remark ?? '',
-        });
+        setFormLotNo(record.lot_no ?? '');
+        setFormItemCd(record.item_cd ?? '');
+        setFormProcessCd(record.process_cd ?? '');
+        setFormDefectTypeCd(record.defect_type_cd ?? '');
+        setFormDefectCauseCd(record.defect_cause_cd ?? '');
+        setFormDefectQty(String(record.defect_qty));
+        setFormRemark(record.remark ?? '');
         setUploadedFileId(record.file_id ?? null);
         setFileList([]);
       }
     }
-  }, [open, mode, record, form]);
+  }, [open, mode, record]);
 
   /* ── Save handler ─── */
   const handleSave = useCallback(async () => {
+    const newErrors: Record<string, string> = {};
+    if (!formItemCd) newErrors.item_cd = '품목을 입력하세요.';
+    if (!formDefectTypeCd) newErrors.defect_type_cd = '불량유형을 선택하세요.';
+    if (!formDefectQty || Number(formDefectQty) < 1) newErrors.defect_qty = '1 이상의 값을 입력하세요.';
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     try {
-      const values = await form.validateFields();
       setLoading(true);
 
       const payload: Record<string, unknown> = {
-        item_cd: values.item_cd,
-        defect_type_cd: values.defect_type_cd,
-        defect_qty: values.defect_qty,
+        item_cd: formItemCd,
+        defect_type_cd: formDefectTypeCd,
+        defect_qty: Number(formDefectQty),
       };
-      if (values.lot_no) payload.lot_no = values.lot_no;
-      if (values.process_cd) payload.process_cd = values.process_cd;
-      if (values.defect_cause_cd) payload.defect_cause_cd = values.defect_cause_cd;
-      if (values.remark) payload.remark = values.remark;
+      if (formLotNo) payload.lot_no = formLotNo;
+      if (formProcessCd) payload.process_cd = formProcessCd;
+      if (formDefectCauseCd) payload.defect_cause_cd = formDefectCauseCd;
+      if (formRemark) payload.remark = formRemark;
       if (uploadedFileId) payload.file_id = uploadedFileId;
 
       await apiClient.post('/v1/defects', payload);
-      message.success('불량이 등록되었습니다.');
-      form.resetFields();
-      setFileList([]);
-      setUploadedFileId(null);
+      toast.success('불량이 등록되었습니다.');
       onSaved();
       onClose();
     } catch (err: any) {
-      if (err?.errorFields) return;
-      message.error(err?.response?.data?.message ?? '저장 중 오류가 발생했습니다.');
+      toast.error(err?.response?.data?.message ?? '저장 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
-  }, [form, uploadedFileId, onSaved, onClose]);
+  }, [formItemCd, formDefectTypeCd, formDefectQty, formLotNo, formProcessCd, formDefectCauseCd, formRemark, uploadedFileId, onSaved, onClose]);
 
   /* ── Delete handler (view mode, REGISTERED only) ─── */
   const handleDelete = useCallback(() => {
     if (!record) return;
-    Modal.confirm({
+    confirm({
       title: '불량 삭제',
       content: '이 불량 기록을 삭제하시겠습니까? 삭제 후 복구할 수 없습니다.',
       okText: '삭제',
-      okType: 'danger',
-      cancelText: '취소',
+      danger: true,
       onOk: async () => {
         try {
           await apiClient.delete(`/v1/defects/${record.defect_id}`);
-          message.success('불량이 삭제되었습니다.');
+          toast.success('불량이 삭제되었습니다.');
           onSaved();
           onClose();
         } catch (err: any) {
-          message.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
+          toast.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
         }
       },
     });
@@ -219,15 +190,15 @@ export default function DefectFormModal({
 
   /* ── Footer ─── */
   const footer = isView ? (
-    <Space>
+    <div className="flex items-center gap-2">
       {record?.status === 'REGISTERED' && (
-        <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
+        <Button variant="danger" icon={<Trash2 className="w-4 h-4" />} onClick={handleDelete}>
           삭제
         </Button>
       )}
       {record?.status !== 'COMPLETED' && onDisposeOpen && (
         <Button
-          type="primary"
+          variant="primary"
           onClick={() => {
             if (record) onDisposeOpen(record.defect_id);
           }}
@@ -236,14 +207,14 @@ export default function DefectFormModal({
         </Button>
       )}
       <Button onClick={onClose}>닫기</Button>
-    </Space>
+    </div>
   ) : (
-    <Space>
+    <div className="flex items-center gap-2">
       <Button onClick={onClose}>취소</Button>
-      <Button type="primary" loading={loading} onClick={handleSave}>
+      <Button variant="primary" loading={loading} onClick={handleSave}>
         등록
       </Button>
-    </Space>
+    </div>
   );
 
   return (
@@ -251,112 +222,174 @@ export default function DefectFormModal({
       open={open}
       title={title}
       width={640}
-      destroyOnClose
       maskClosable={false}
       footer={footer}
-      onCancel={onClose}
+      onClose={onClose}
     >
-      <Form
-        form={form}
-        layout="horizontal"
-        labelCol={{ span: 6 }}
-        wrapperCol={{ span: 18 }}
-        disabled={isView}
-        autoComplete="off"
-      >
-        <Form.Item name="lot_no" label="LOT번호">
-          <Input placeholder="LOT번호 입력" />
-        </Form.Item>
+      <div className={isView ? 'pointer-events-none opacity-70' : ''}>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">LOT번호</label>
+            <input
+              className="w-full h-9 bg-gray-50 border border-gray-200 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500"
+              placeholder="LOT번호 입력"
+              value={formLotNo}
+              onChange={(e) => setFormLotNo(e.target.value)}
+              disabled={isView}
+            />
+          </div>
 
-        <Form.Item name="item_cd" label="품목" rules={[{ required: true, message: '품목을 입력하세요.' }]}>
-          <Input placeholder="품목코드 입력" />
-        </Form.Item>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              품목 <span className="text-red-500">*</span>
+            </label>
+            <input
+              className={`w-full h-9 bg-gray-50 border rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500 ${errors.item_cd ? 'border-red-400' : 'border-gray-200'}`}
+              placeholder="품목코드 입력"
+              value={formItemCd}
+              onChange={(e) => setFormItemCd(e.target.value)}
+              disabled={isView}
+            />
+            {errors.item_cd && <p className="text-red-500 text-xs mt-1">{errors.item_cd}</p>}
+          </div>
 
-        <Form.Item name="process_cd" label="공정">
-          <Input placeholder="공정코드 입력" />
-        </Form.Item>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">공정</label>
+            <input
+              className="w-full h-9 bg-gray-50 border border-gray-200 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500"
+              placeholder="공정코드 입력"
+              value={formProcessCd}
+              onChange={(e) => setFormProcessCd(e.target.value)}
+              disabled={isView}
+            />
+          </div>
 
-        <Form.Item
-          name="defect_type_cd"
-          label="불량유형"
-          rules={[{ required: true, message: '불량유형을 선택하세요.' }]}
-        >
-          <CommonCodeSelect groupCd="DEFECT_TYPE" placeholder="불량유형 선택" disabled={isView} />
-        </Form.Item>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              불량유형 <span className="text-red-500">*</span>
+            </label>
+            <CommonCodeSelect
+              groupCd="DEFECT_TYPE"
+              placeholder="불량유형 선택"
+              disabled={isView}
+              value={formDefectTypeCd}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormDefectTypeCd(e.target.value)}
+            />
+            {errors.defect_type_cd && <p className="text-red-500 text-xs mt-1">{errors.defect_type_cd}</p>}
+          </div>
 
-        <Form.Item name="defect_cause_cd" label="불량원인">
-          <CommonCodeSelect groupCd="DEFECT_CAUSE" placeholder="불량원인 선택" disabled={isView} />
-        </Form.Item>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">불량원인</label>
+            <CommonCodeSelect
+              groupCd="DEFECT_CAUSE"
+              placeholder="불량원인 선택"
+              disabled={isView}
+              value={formDefectCauseCd}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormDefectCauseCd(e.target.value)}
+            />
+          </div>
 
-        <Form.Item
-          name="defect_qty"
-          label="수량"
-          rules={[
-            { required: true, message: '수량을 입력하세요.' },
-            { type: 'number', min: 1, message: '1 이상의 값을 입력하세요.' },
-          ]}
-        >
-          <InputNumber min={1} style={{ width: '100%' }} placeholder="불량 수량" precision={0} />
-        </Form.Item>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              수량 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              className={`w-full h-9 bg-gray-50 border rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500 ${errors.defect_qty ? 'border-red-400' : 'border-gray-200'}`}
+              min={1}
+              placeholder="불량 수량"
+              value={formDefectQty}
+              onChange={(e) => setFormDefectQty(e.target.value)}
+              disabled={isView}
+            />
+            {errors.defect_qty && <p className="text-red-500 text-xs mt-1">{errors.defect_qty}</p>}
+          </div>
 
-        {/* Photo section */}
-        <Form.Item label="사진">
-          {isView ? (
-            photoUrl ? (
-              <Image
-                src={photoUrl}
-                alt="불량 사진"
-                style={{ maxWidth: 320 }}
-                preview={{ src: photoUrl }}
-              />
+          {/* Photo section */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">사진</label>
+            {isView ? (
+              photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt="불량 사진"
+                  className="max-w-[320px] rounded"
+                />
+              ) : (
+                <span className="text-gray-400 text-sm">첨부된 사진 없음</span>
+              )
             ) : (
-              <span style={{ color: '#999' }}>첨부된 사진 없음</span>
-            )
-          ) : (
-            <>
-              <FileUpload
-                accept=".jpg,.jpeg,.png"
-                maxCount={1}
-                maxSizeMB={5}
-                fileList={fileList}
-                onChange={setFileList}
-                onUploadComplete={(fileInfo) => setUploadedFileId(fileInfo.id)}
-                listType="picture"
-              />
-              {uploadedFileId && fileList.length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  {fileList[0]?.url || fileList[0]?.thumbUrl ? (
-                    <img
-                      src={fileList[0].thumbUrl ?? fileList[0].url}
-                      alt="미리보기"
-                      style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4 }}
-                    />
-                  ) : null}
-                </div>
-              )}
-            </>
-          )}
-        </Form.Item>
+              <>
+                <FileUpload
+                  accept=".jpg,.jpeg,.png"
+                  maxCount={1}
+                  maxSizeMB={5}
+                  fileList={fileList as any}
+                  onChange={setFileList as any}
+                  onUploadComplete={(fileInfo: any) => setUploadedFileId(fileInfo.id)}
+                  listType="picture"
+                />
+                {uploadedFileId && fileList.length > 0 && (
+                  <div className="mt-2">
+                    {(fileList[0] as any)?.url || (fileList[0] as any)?.thumbUrl ? (
+                      <img
+                        src={(fileList[0] as any).thumbUrl ?? (fileList[0] as any).url}
+                        alt="미리보기"
+                        className="w-20 h-20 object-cover rounded"
+                      />
+                    ) : null}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
-        <Form.Item name="remark" label="비고">
-          <Input.TextArea rows={3} placeholder="비고 입력" />
-        </Form.Item>
-      </Form>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">비고</label>
+            <textarea
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-cyan-500"
+              rows={3}
+              placeholder="비고 입력"
+              value={formRemark}
+              onChange={(e) => setFormRemark(e.target.value)}
+              disabled={isView}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Disposal history — view mode only */}
       {isView && record?.disposals && record.disposals.length > 0 && (
         <>
-          <Divider style={{ fontSize: 13 }}>
-            처리 이력
-          </Divider>
-          <Table<DisposalRow>
-            columns={disposalColumns}
-            dataSource={record.disposals}
-            rowKey="dispose_id"
-            size="small"
-            pagination={false}
-            bordered
-          />
+          <div className="border-t border-gray-200 mt-6 pt-4">
+            <h4 className="text-sm font-semibold text-gray-600 mb-3">처리 이력</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 border border-gray-200" style={{ width: 100 }}>처리유형</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 border border-gray-200" style={{ width: 90 }}>처리수량</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 border border-gray-200" style={{ width: 100 }}>승인자</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 border border-gray-200" style={{ width: 160 }}>처리일시</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {record.disposals.map((d) => (
+                    <tr key={d.dispose_id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 border border-gray-200">
+                        <Tag color={DISPOSE_TYPE_COLOR[d.dispose_type] ?? 'default'}>
+                          {DISPOSE_TYPE_LABEL[d.dispose_type] ?? d.dispose_type}
+                        </Tag>
+                      </td>
+                      <td className="px-3 py-2 border border-gray-200 text-right">{d.dispose_qty?.toLocaleString() ?? '-'}</td>
+                      <td className="px-3 py-2 border border-gray-200">{(d.approve_by as string) || '-'}</td>
+                      <td className="px-3 py-2 border border-gray-200">{d.create_dt ? new Date(d.create_dt).toLocaleString('ko-KR') : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </>
       )}
     </Modal>

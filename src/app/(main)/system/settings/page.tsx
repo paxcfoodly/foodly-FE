@@ -1,19 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Tabs,
-  Form,
-  Input,
-  InputNumber,
-  Card,
-  Select,
-  Table,
-  Space,
-  message,
-  Modal,
-} from 'antd';
-import { EditOutlined } from '@ant-design/icons';
+import { Pencil } from 'lucide-react';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import FormField from '@/components/ui/FormField';
+import Modal from '@/components/ui/Modal';
+import Table from '@/components/ui/Table';
+import Tabs from '@/components/ui/Tabs';
+import toast from '@/components/ui/toast';
 import PermissionButton from '@/components/auth/PermissionButton';
 import apiClient from '@/lib/apiClient';
 import type { ApiResponse } from '@/types';
@@ -56,77 +53,88 @@ interface NumberingEditValues {
 /* ── Tab 1: 회사정보 ─────────────────────────────── */
 
 function CompanyTab() {
-  const [form] = Form.useForm<CompanyData>();
+  const [formValues, setFormValues] = useState<CompanyData>({
+    company_cd: '',
+    company_nm: '',
+    biz_no: '',
+    ceo_nm: '',
+    address: '',
+    tel: '',
+    fax: '',
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function fetch() {
       try {
         const res = await apiClient.get<ApiResponse<CompanyData>>('/v1/settings/company');
-        form.setFieldsValue(res.data.data);
+        if (res.data.data) setFormValues(res.data.data);
       } catch {
-        message.error('설정을 불러오지 못했습니다. 페이지를 새로고침하거나 관리자에게 문의하세요.');
+        toast.error('설정을 불러오지 못했습니다. 페이지를 새로고침하거나 관리자에게 문의하세요.');
       }
     }
     fetch();
-  }, [form]);
+  }, []);
 
   const handleSave = useCallback(async () => {
+    if (!formValues.company_nm) {
+      toast.warning('회사명은(는) 필수입니다.');
+      return;
+    }
     try {
-      const values = await form.validateFields();
       setLoading(true);
-      await apiClient.put('/v1/settings/company', values);
-      message.success('설정이 저장되었습니다.');
-    } catch (err: unknown) {
-      const e = err as { errorFields?: unknown[] };
-      if (e?.errorFields) return;
-      message.error('설정 저장에 실패했습니다. 입력값을 확인하고 다시 시도하세요.');
+      await apiClient.put('/v1/settings/company', formValues);
+      toast.success('설정이 저장되었습니다.');
+    } catch {
+      toast.error('설정 저장에 실패했습니다. 입력값을 확인하고 다시 시도하세요.');
     } finally {
       setLoading(false);
     }
-  }, [form]);
+  }, [formValues]);
+
+  const updateField = (field: keyof CompanyData, value: string) => {
+    setFormValues((prev) => ({ ...prev, [field]: value }));
+  };
 
   return (
-    <Card bordered={false} style={{ maxWidth: 600 }}>
-      <Form form={form} layout="vertical">
-        <Form.Item name="company_cd" label="회사코드">
-          <Input disabled />
-        </Form.Item>
-        <Form.Item
-          name="company_nm"
-          label="회사명"
-          rules={[{ required: true, message: '회사명은(는) 필수입니다.' }]}
+    <div className="max-w-[600px]">
+      <div className="space-y-4">
+        <FormField label="회사코드">
+          <Input value={formValues.company_cd} disabled />
+        </FormField>
+        <FormField label="회사명" required>
+          <Input
+            value={formValues.company_nm}
+            onChange={(e) => updateField('company_nm', e.target.value)}
+            required
+          />
+        </FormField>
+        <FormField label="사업자번호">
+          <Input value={formValues.biz_no ?? ''} onChange={(e) => updateField('biz_no', e.target.value)} />
+        </FormField>
+        <FormField label="대표자">
+          <Input value={formValues.ceo_nm ?? ''} onChange={(e) => updateField('ceo_nm', e.target.value)} />
+        </FormField>
+        <FormField label="주소">
+          <Textarea rows={2} value={formValues.address ?? ''} onChange={(e) => updateField('address', e.target.value)} />
+        </FormField>
+        <FormField label="연락처">
+          <Input value={formValues.tel ?? ''} onChange={(e) => updateField('tel', e.target.value)} />
+        </FormField>
+        <FormField label="팩스">
+          <Input value={formValues.fax ?? ''} onChange={(e) => updateField('fax', e.target.value)} />
+        </FormField>
+        <PermissionButton
+          action="update"
+          menuUrl={MENU_URL}
+          variant="primary"
+          loading={loading}
+          onClick={handleSave}
         >
-          <Input />
-        </Form.Item>
-        <Form.Item name="biz_no" label="사업자번호">
-          <Input />
-        </Form.Item>
-        <Form.Item name="ceo_nm" label="대표자">
-          <Input />
-        </Form.Item>
-        <Form.Item name="address" label="주소">
-          <Input.TextArea rows={2} />
-        </Form.Item>
-        <Form.Item name="tel" label="연락처">
-          <Input />
-        </Form.Item>
-        <Form.Item name="fax" label="팩스">
-          <Input />
-        </Form.Item>
-        <Form.Item>
-          <PermissionButton
-            action="update"
-            menuUrl={MENU_URL}
-            type="primary"
-            loading={loading}
-            onClick={handleSave}
-          >
-            회사정보 저장
-          </PermissionButton>
-        </Form.Item>
-      </Form>
-    </Card>
+          회사정보 저장
+        </PermissionButton>
+      </div>
+    </div>
   );
 }
 
@@ -137,7 +145,7 @@ function NumberingTab() {
   const [loading, setLoading] = useState(false);
   const [editTarget, setEditTarget] = useState<NumberingRow | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editForm] = Form.useForm<NumberingEditValues>();
+  const [editForm, setEditForm] = useState<NumberingEditValues>({ prefix: '', seq_length: 4 });
   const [saving, setSaving] = useState(false);
 
   const fetchNumberings = useCallback(async () => {
@@ -146,7 +154,7 @@ function NumberingTab() {
       const res = await apiClient.get<ApiResponse<NumberingRow[]>>('/v1/settings/numberings');
       setNumberings(Array.isArray(res.data.data) ? res.data.data : []);
     } catch {
-      message.error('설정을 불러오지 못했습니다. 페이지를 새로고침하거나 관리자에게 문의하세요.');
+      toast.error('설정을 불러오지 못했습니다. 페이지를 새로고침하거나 관리자에게 문의하세요.');
     } finally {
       setLoading(false);
     }
@@ -158,23 +166,24 @@ function NumberingTab() {
 
   const handleEdit = useCallback((record: NumberingRow) => {
     setEditTarget(record);
-    editForm.setFieldsValue({ prefix: record.prefix, seq_length: record.seq_length });
+    setEditForm({ prefix: record.prefix, seq_length: record.seq_length });
     setEditModalOpen(true);
-  }, [editForm]);
+  }, []);
 
   const handleEditSave = useCallback(async () => {
     if (!editTarget) return;
+    if (!editForm.seq_length) {
+      toast.warning('자릿수는(는) 필수입니다.');
+      return;
+    }
     try {
-      const values = await editForm.validateFields();
       setSaving(true);
-      await apiClient.put(`/v1/settings/numberings/${editTarget.num_type}`, values);
-      message.success('설정이 저장되었습니다.');
+      await apiClient.put(`/v1/settings/numberings/${editTarget.num_type}`, editForm);
+      toast.success('설정이 저장되었습니다.');
       setEditModalOpen(false);
       fetchNumberings();
-    } catch (err: unknown) {
-      const e = err as { errorFields?: unknown[] };
-      if (e?.errorFields) return;
-      message.error('설정 저장에 실패했습니다. 입력값을 확인하고 다시 시도하세요.');
+    } catch {
+      toast.error('설정 저장에 실패했습니다. 입력값을 확인하고 다시 시도하세요.');
     } finally {
       setSaving(false);
     }
@@ -196,8 +205,8 @@ function NumberingTab() {
           action="update"
           menuUrl={MENU_URL}
           size="small"
-          type="text"
-          icon={<EditOutlined />}
+          variant="ghost"
+          icon={<Pencil className="w-4 h-4" />}
           onClick={() => handleEdit(record)}
         >
           {''}
@@ -213,32 +222,39 @@ function NumberingTab() {
         dataSource={numberings}
         rowKey="num_type"
         loading={loading}
-        pagination={false}
-        size="small"
-        locale={{ emptyText: '등록된 채번규칙이 없습니다. 추가 버튼을 눌러 새 규칙을 만드세요.' }}
+        emptyText="등록된 채번규칙이 없습니다. 추가 버튼을 눌러 새 규칙을 만드세요."
       />
 
       <Modal
         open={editModalOpen}
         title="채번규칙 편집"
-        onOk={handleEditSave}
-        onCancel={() => setEditModalOpen(false)}
-        okText="채번규칙 저장"
-        cancelText="취소"
-        confirmLoading={saving}
+        onClose={() => setEditModalOpen(false)}
+        footer={
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setEditModalOpen(false)}>취소</Button>
+            <Button variant="primary" loading={saving} onClick={handleEditSave}>채번규칙 저장</Button>
+          </div>
+        }
       >
-        <Form form={editForm} layout="vertical">
-          <Form.Item name="prefix" label="접두어">
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="seq_length"
-            label="자릿수"
-            rules={[{ required: true, message: '자릿수는(는) 필수입니다.' }]}
-          >
-            <InputNumber min={1} max={10} style={{ width: '100%' }} />
-          </Form.Item>
-        </Form>
+        <div className="space-y-4">
+          <FormField label="접두어">
+            <Input
+              value={editForm.prefix}
+              onChange={(e) => setEditForm((prev) => ({ ...prev, prefix: e.target.value }))}
+            />
+          </FormField>
+          <FormField label="자릿수" required>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              required
+              className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+              value={editForm.seq_length}
+              onChange={(e) => setEditForm((prev) => ({ ...prev, seq_length: Number(e.target.value) }))}
+            />
+          </FormField>
+        </div>
       </Modal>
     </>
   );
@@ -252,7 +268,7 @@ interface WorkshopOption {
 }
 
 function DefaultsTab() {
-  const [form] = Form.useForm<Record<string, string | number>>();
+  const [formValues, setFormValues] = useState<Record<string, string | number>>({});
   const [loading, setLoading] = useState(false);
   const [workshopOptions, setWorkshopOptions] = useState<{ label: string; value: string }[]>([]);
 
@@ -273,7 +289,7 @@ function DefaultsTab() {
               fieldValues[s.setting_key] = s.setting_value;
             }
           });
-          form.setFieldsValue(fieldValues);
+          setFormValues(fieldValues);
         }
         const workshops = workshopRes.data.data;
         if (Array.isArray(workshops)) {
@@ -282,61 +298,75 @@ function DefaultsTab() {
           );
         }
       } catch {
-        message.error('설정을 불러오지 못했습니다. 페이지를 새로고침하거나 관리자에게 문의하세요.');
+        toast.error('설정을 불러오지 못했습니다. 페이지를 새로고침하거나 관리자에게 문의하세요.');
       }
     }
     fetchData();
-  }, [form]);
+  }, []);
 
   const handleSave = useCallback(async () => {
     try {
-      const values = await form.validateFields();
       setLoading(true);
-      const settings = Object.entries(values)
+      const settings = Object.entries(formValues)
         .filter(([, v]) => v !== undefined && v !== null && v !== '')
         .map(([key, value]) => ({ key, value: String(value) }));
       await apiClient.patch('/v1/settings', { settings });
-      message.success('설정이 저장되었습니다.');
-    } catch (err: unknown) {
-      const e = err as { errorFields?: unknown[] };
-      if (e?.errorFields) return;
-      message.error('설정 저장에 실패했습니다. 입력값을 확인하고 다시 시도하세요.');
+      toast.success('설정이 저장되었습니다.');
+    } catch {
+      toast.error('설정 저장에 실패했습니다. 입력값을 확인하고 다시 시도하세요.');
     } finally {
       setLoading(false);
     }
-  }, [form]);
+  }, [formValues]);
 
   return (
-    <Card bordered={false} style={{ maxWidth: 600 }}>
-      <Form form={form} layout="vertical">
-        <Form.Item name="default_warehouse_cd" label="기본 창고">
-          <Select options={workshopOptions} allowClear placeholder="창고 선택" />
-        </Form.Item>
-        <Form.Item name="default_workshop_cd" label="기본 생산라인">
-          <Select options={workshopOptions} allowClear placeholder="생산라인 선택" />
-        </Form.Item>
-        <Form.Item name="page_size" label="페이지당 행수">
-          <InputNumber min={10} max={100} style={{ width: '100%' }} />
-        </Form.Item>
-        <Form.Item>
-          <PermissionButton
-            action="update"
-            menuUrl={MENU_URL}
-            type="primary"
-            loading={loading}
-            onClick={handleSave}
-          >
-            기본값 저장
-          </PermissionButton>
-        </Form.Item>
-      </Form>
-    </Card>
+    <div className="max-w-[600px]">
+      <div className="space-y-4">
+        <FormField label="기본 창고">
+          <Select
+            options={workshopOptions}
+            placeholder="창고 선택"
+            value={(formValues.default_warehouse_cd as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, default_warehouse_cd: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="기본 생산라인">
+          <Select
+            options={workshopOptions}
+            placeholder="생산라인 선택"
+            value={(formValues.default_workshop_cd as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, default_workshop_cd: e.target.value }))}
+          />
+        </FormField>
+        <FormField label="페이지당 행수">
+          <input
+            type="number"
+            min={10}
+            max={100}
+            className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+            value={(formValues.page_size as number) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, page_size: Number(e.target.value) || '' }))}
+          />
+        </FormField>
+        <PermissionButton
+          action="update"
+          menuUrl={MENU_URL}
+          variant="primary"
+          loading={loading}
+          onClick={handleSave}
+        >
+          기본값 저장
+        </PermissionButton>
+      </div>
+    </div>
   );
 }
 
 /* ── Main Page ──────────────────────────────────── */
 
 export default function SystemSettingsPage() {
+  const [activeTab, setActiveTab] = useState('company');
+
   const items = [
     {
       key: 'company',
@@ -356,8 +386,8 @@ export default function SystemSettingsPage() {
   ];
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size={16}>
-      <Tabs items={items} tabPosition="top" />
-    </Space>
+    <div className="w-full space-y-4">
+      <Tabs items={items} activeKey={activeTab} onChange={setActiveTab} />
+    </div>
   );
 }

@@ -1,20 +1,12 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import {
-  Card,
-  Button,
-  Space,
-  Typography,
-  Select,
-  Checkbox,
-  Table,
-  Spin,
-  Empty,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Search, RotateCcw } from 'lucide-react';
 import dayjs from 'dayjs';
+import Button from '@/components/ui/Button';
+import Spinner from '@/components/ui/Spinner';
+import Empty from '@/components/ui/Empty';
+import Table, { type TableColumn } from '@/components/ui/Table';
 import InventoryBarChart from '@/components/reports/InventoryBarChart';
 import ExcelDownloadButton from '@/components/common/ExcelDownloadButton';
 import apiClient from '@/lib/apiClient';
@@ -32,6 +24,7 @@ interface InventoryRow {
   turnover_rate: number;
   days_since_last_tx: number;
   is_stagnant: boolean;
+  [key: string]: unknown;
 }
 
 interface SelectOption {
@@ -41,44 +34,39 @@ interface SelectOption {
 
 // ─── Columns ───
 
-const inventoryColumns: ColumnsType<InventoryRow> = [
-  { title: '품목코드', dataIndex: 'item_cd', key: 'item_cd', width: 120, ellipsis: true },
-  { title: '품목명', dataIndex: 'item_nm', key: 'item_nm', width: 150, ellipsis: true },
-  { title: '창고', dataIndex: 'wh_nm', key: 'wh_nm', width: 120, ellipsis: true },
+const inventoryColumns: TableColumn<InventoryRow>[] = [
+  { title: '품목코드', dataIndex: 'item_cd', width: 120, ellipsis: true },
+  { title: '품목명', dataIndex: 'item_nm', width: 150, ellipsis: true },
+  { title: '창고', dataIndex: 'wh_nm', width: 120, ellipsis: true },
   {
     title: '현재고',
     dataIndex: 'qty',
-    key: 'qty',
     width: 100,
     align: 'right',
-    sorter: (a, b) => a.qty - b.qty,
+    sorter: true,
   },
-  { title: '단위', dataIndex: 'unit', key: 'unit', width: 80 },
+  { title: '단위', dataIndex: 'unit', width: 80 },
   {
     title: '기간출고량',
     dataIndex: 'out_qty',
-    key: 'out_qty',
     width: 110,
     align: 'right',
-    sorter: (a, b) => a.out_qty - b.out_qty,
+    sorter: true,
   },
   {
     title: '회전율(회)',
     dataIndex: 'turnover_rate',
-    key: 'turnover_rate',
     width: 110,
     align: 'right',
-    render: (v: number) => v.toFixed(2),
-    sorter: (a, b) => a.turnover_rate - b.turnover_rate,
+    sorter: true,
+    render: (v: unknown) => Number(v).toFixed(2),
   },
   {
     title: '체류일수',
     dataIndex: 'days_since_last_tx',
-    key: 'days_since_last_tx',
     width: 110,
     align: 'right',
-    sorter: (a, b) => a.days_since_last_tx - b.days_since_last_tx,
-    defaultSortOrder: 'descend',
+    sorter: true,
   },
 ];
 
@@ -93,14 +81,6 @@ const excelColumns = [
   { header: '체류일수', key: 'days_since_last_tx', width: 12 },
 ];
 
-// ─── Row class for stagnant highlight ───
-
-function rowClassName(record: InventoryRow): string {
-  if (record.days_since_last_tx >= 180) return 'row-danger';
-  if (record.days_since_last_tx >= 90) return 'row-warning';
-  return '';
-}
-
 // ─── Inline styles for warning rows ───
 
 const stagnantStyles = `
@@ -111,13 +91,16 @@ const stagnantStyles = `
 // ─── Page ───
 
 export default function InventoryReportPage() {
-  const [itemCd, setItemCd] = useState<string | undefined>(undefined);
-  const [whCd, setWhCd] = useState<string | undefined>(undefined);
+  const [itemCd, setItemCd] = useState<string>('');
+  const [whCd, setWhCd] = useState<string>('');
   const [stagnantOnly, setStagnantOnly] = useState(false);
   const [data, setData] = useState<InventoryRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [itemOptions, setItemOptions] = useState<SelectOption[]>([]);
   const [whOptions, setWhOptions] = useState<SelectOption[]>([]);
+
+  const [tablePage, setTablePage] = useState(1);
+  const pageSize = 20;
 
   // Load dropdown options on mount
   useEffect(() => {
@@ -165,15 +148,15 @@ export default function InventoryReportPage() {
 
   const handleSearch = () => {
     fetchAll({
-      wh_cd: whCd,
-      item_cd: itemCd,
+      wh_cd: whCd || undefined,
+      item_cd: itemCd || undefined,
       stagnant_only: stagnantOnly || undefined,
     });
   };
 
   const handleReset = () => {
-    setItemCd(undefined);
-    setWhCd(undefined);
+    setItemCd('');
+    setWhCd('');
     setStagnantOnly(false);
     fetchAll({});
   };
@@ -184,88 +167,106 @@ export default function InventoryReportPage() {
     .slice(0, 20)
     .map((d) => ({ item_nm: d.item_nm, qty: d.qty, turnover_rate: d.turnover_rate }));
 
+  const paginatedData = data.slice((tablePage - 1) * pageSize, tablePage * pageSize);
+
   return (
-    <div style={{ padding: '0 0 24px' }}>
+    <div className="pb-6">
       <style>{stagnantStyles}</style>
 
-      <Typography.Title level={4} style={{ marginBottom: 16 }}>
+      <h4 className="text-lg font-semibold text-gray-900 mb-4">
         재고현황 리포트
-      </Typography.Title>
+      </h4>
 
       {/* Search Form */}
-      <Card size="small" style={{ marginBottom: 0 }}>
-        <Space wrap>
-          <Select
-            placeholder="품목 전체"
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center gap-3 flex-wrap">
+          <select
             value={itemCd}
-            onChange={(val) => setItemCd(val || undefined)}
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            options={itemOptions}
-            style={{ width: 200 }}
-          />
-          <Select
-            placeholder="창고 전체"
-            value={whCd}
-            onChange={(val) => setWhCd(val || undefined)}
-            allowClear
-            options={whOptions}
-            style={{ width: 160 }}
-          />
-          <Checkbox
-            checked={stagnantOnly}
-            onChange={(e) => setStagnantOnly(e.target.checked)}
+            onChange={(e) => setItemCd(e.target.value)}
+            className="h-9 w-[200px] px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15"
           >
+            <option value="">품목 전체</option>
+            {itemOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <select
+            value={whCd}
+            onChange={(e) => setWhCd(e.target.value)}
+            className="h-9 w-[160px] px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15"
+          >
+            <option value="">창고 전체</option>
+            {whOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <label className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={stagnantOnly}
+              onChange={(e) => setStagnantOnly(e.target.checked)}
+              className="accent-cyan-600"
+            />
             장기체류만 보기
-          </Checkbox>
-          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} loading={loading}>
+          </label>
+          <Button variant="primary" icon={<Search className="w-4 h-4" />} onClick={handleSearch} loading={loading}>
             조회
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={handleReset}>
+          <Button icon={<RotateCcw className="w-4 h-4" />} onClick={handleReset}>
             초기화
           </Button>
-        </Space>
-      </Card>
+        </div>
+      </div>
 
       {/* Chart */}
-      <Card size="small" title="품목별 재고현황" style={{ marginTop: 24 }}>
+      <div className="bg-white rounded-xl p-4 shadow-sm mt-6">
+        <h5 className="text-sm font-semibold text-gray-700 mb-4">품목별 재고현황</h5>
         {loading ? (
-          <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Spin tip="데이터를 집계하는 중입니다..." />
+          <div className="h-[320px] flex items-center justify-center">
+            <Spinner tip="데이터를 집계하는 중입니다..." />
           </div>
         ) : chartData.length > 0 ? (
           <InventoryBarChart data={chartData} />
         ) : (
-          <Empty description="데이터가 없습니다" style={{ height: 320, paddingTop: 100 }} />
+          <div className="h-[320px] flex items-center justify-center">
+            <Empty description="데이터가 없습니다" />
+          </div>
         )}
-      </Card>
+      </div>
 
       {/* DataGrid */}
-      <Card
-        size="small"
-        title="재고 상세"
-        extra={
+      <div className="bg-white rounded-xl p-4 shadow-sm mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h5 className="text-sm font-semibold text-gray-700">재고 상세</h5>
           <ExcelDownloadButton
             filename={`재고현황_${dayjs().format('YYYY-MM-DD')}`}
             columns={excelColumns}
             data={data as unknown as Record<string, unknown>[]}
             disabled={data.length === 0 || loading}
           />
-        }
-        style={{ marginTop: 24 }}
-      >
+        </div>
         <Table<InventoryRow>
           columns={inventoryColumns}
-          dataSource={data}
+          dataSource={paginatedData}
           rowKey={(r) => `${r.item_cd}-${r.wh_cd}`}
-          rowClassName={rowClassName}
           loading={loading}
-          size="small"
-          scroll={{ x: 'max-content' }}
-          pagination={{ pageSize: 20, showTotal: (total) => `총 ${total}건` }}
+          scrollX={900}
+          onRow={(record) => ({
+            className:
+              record.days_since_last_tx >= 180
+                ? 'row-danger'
+                : record.days_since_last_tx >= 90
+                  ? 'row-warning'
+                  : '',
+          })}
+          pagination={{
+            current: tablePage,
+            pageSize,
+            total: data.length,
+            onChange: (p) => setTablePage(p),
+          }}
         />
-      </Card>
+      </div>
     </div>
   );
 }

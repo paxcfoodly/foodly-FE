@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Space, Tag, Modal, Form, Input, Select, Switch, message } from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  NotificationOutlined,
-} from '@ant-design/icons';
+import { Plus, Pencil, Trash2, Bell } from 'lucide-react';
+import Tag from '@/components/ui/Tag';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import FormField from '@/components/ui/FormField';
+import toast from '@/components/ui/toast';
 import DataGrid, { type DataGridColumn } from '@/components/common/DataGrid';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
 import FormModal, { type FormModalMode } from '@/components/common/FormModal';
@@ -89,7 +91,7 @@ export default function NoticePage() {
         setTotal(0);
       }
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '공지사항 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '공지사항 조회에 실패했습니다.');
       setDataSource([]);
     } finally {
       setLoading(false);
@@ -139,12 +141,15 @@ export default function NoticePage() {
         sorter: true,
         ellipsis: true,
         render: (val: unknown, record: NoticeRow) => (
-          <a onClick={() => setViewRecord(record)} style={{ color: '#1677ff' }}>
+          <button
+            onClick={() => setViewRecord(record)}
+            className="text-cyan-accent hover:underline text-left"
+          >
             {record.is_popup === 'Y' && (
-              <NotificationOutlined style={{ color: '#ff4d4f', marginRight: 6 }} />
+              <Bell className="w-4 h-4 text-red-500 inline mr-1.5" />
             )}
             {val as string}
-          </a>
+          </button>
         ),
       },
       {
@@ -154,7 +159,7 @@ export default function NoticePage() {
         sorter: true,
         align: 'center' as const,
         render: (val: unknown) => (
-          <Tag color={(val as string) === 'Y' ? 'red' : 'default'}>
+          <Tag color={(val as string) === 'Y' ? 'red' : 'gray'}>
             {(val as string) === 'Y' ? '팝업' : '일반'}
           </Tag>
         ),
@@ -182,13 +187,13 @@ export default function NoticePage() {
         fixed: 'right' as const,
         align: 'center' as const,
         render: (_: unknown, record: NoticeRow) => (
-          <Space size="small">
+          <div className="flex items-center gap-2 justify-center">
             <PermissionButton
               action="update"
               menuUrl={MENU_URL}
               fallback="hide"
               size="small"
-              icon={<EditOutlined />}
+              icon={<Pencil className="w-4 h-4" />}
               onClick={() => handleEdit(record)}
             >
               수정
@@ -198,13 +203,13 @@ export default function NoticePage() {
               menuUrl={MENU_URL}
               fallback="hide"
               size="small"
-              danger
-              icon={<DeleteOutlined />}
+              variant="danger"
+              icon={<Trash2 className="w-4 h-4" />}
               onClick={() => setDeleteTarget(record)}
             >
               삭제
             </PermissionButton>
-          </Space>
+          </div>
         ),
       },
     ],
@@ -273,11 +278,11 @@ export default function NoticePage() {
     if (!deleteTarget) return;
     try {
       await apiClient.delete(`/v1/notices/${deleteTarget.notice_id}`);
-      message.success('공지사항이 삭제되었습니다.');
+      toast.success('공지사항이 삭제되었습니다.');
       setDeleteTarget(null);
       fetchNotices();
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
     }
   }, [deleteTarget, fetchNotices]);
 
@@ -292,7 +297,7 @@ export default function NoticePage() {
 
   /* ── Render ─── */
   return (
-    <div style={{ padding: 0 }}>
+    <div>
       {/* 검색 영역 */}
       <SearchForm
         fields={searchFields}
@@ -303,8 +308,8 @@ export default function NoticePage() {
           <PermissionButton
             action="create"
             menuUrl={MENU_URL}
-            type="primary"
-            icon={<PlusOutlined />}
+            variant="primary"
+            icon={<Plus className="w-4 h-4" />}
             onClick={handleCreate}
           >
             공지 등록
@@ -338,34 +343,42 @@ export default function NoticePage() {
         title={modalMode === 'create' ? '공지사항 등록' : '공지사항 수정'}
         width={640}
       >
-        {() => (
+        {(form) => (
           <>
-            <Form.Item
-              name="title"
-              label="제목"
-              rules={[{ required: true, message: '제목을 입력하세요.' }]}
-            >
-              <Input placeholder="공지사항 제목" maxLength={200} />
-            </Form.Item>
+            <FormField label="제목" required>
+              <Input
+                name="title"
+                placeholder="공지사항 제목"
+                maxLength={200}
+                required
+                value={(form.getFieldsValue().title as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ title: e.target.value } as Partial<NoticeFormValues>)}
+              />
+            </FormField>
 
-            <Form.Item name="content" label="내용">
-              <Input.TextArea
+            <FormField label="내용">
+              <Textarea
+                name="content"
                 placeholder="공지사항 내용을 입력하세요."
                 rows={8}
                 maxLength={5000}
-                showCount
+                value={(form.getFieldsValue().content as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ content: e.target.value } as Partial<NoticeFormValues>)}
               />
-            </Form.Item>
+            </FormField>
 
-            <Form.Item name="is_popup" label="팝업 공지">
+            <FormField label="팝업 공지">
               <Select
+                name="is_popup"
+                placeholder="일반 공지"
+                value={(form.getFieldsValue().is_popup as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ is_popup: e.target.value } as Partial<NoticeFormValues>)}
                 options={[
                   { label: '일반 공지', value: 'N' },
                   { label: '팝업 공지', value: 'Y' },
                 ]}
-                placeholder="일반 공지"
               />
-            </Form.Item>
+            </FormField>
           </>
         )}
       </FormModal>
@@ -374,11 +387,13 @@ export default function NoticePage() {
       <Modal
         open={!!deleteTarget}
         title="공지사항 삭제"
-        onOk={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-        okText="삭제"
-        cancelText="취소"
-        okButtonProps={{ danger: true }}
+        onClose={() => setDeleteTarget(null)}
+        footer={
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setDeleteTarget(null)}>취소</Button>
+            <Button variant="danger" onClick={handleDelete}>삭제</Button>
+          </div>
+        }
       >
         <p>
           <strong>{deleteTarget?.title}</strong> 공지를 삭제하시겠습니까?
@@ -390,30 +405,20 @@ export default function NoticePage() {
         open={!!viewRecord}
         title={viewRecord?.title ?? '공지사항'}
         width={640}
-        onCancel={() => setViewRecord(null)}
-        footer={null}
+        onClose={() => setViewRecord(null)}
       >
         {viewRecord && (
           <>
-            <div style={{ marginBottom: 8 }}>
-              <Tag color={viewRecord.is_popup === 'Y' ? 'red' : 'default'}>
+            <div className="mb-2">
+              <Tag color={viewRecord.is_popup === 'Y' ? 'red' : 'gray'}>
                 {viewRecord.is_popup === 'Y' ? '팝업 공지' : '일반 공지'}
               </Tag>
-              <span style={{ fontSize: 12, color: '#999', marginLeft: 8 }}>
+              <span className="text-xs text-gray-400 ml-2">
                 작성자: {viewRecord.create_by ?? '-'} |{' '}
                 {new Date(viewRecord.create_dt).toLocaleString('ko-KR')}
               </span>
             </div>
-            <div
-              style={{
-                padding: 16,
-                backgroundColor: '#fafafa',
-                borderRadius: 4,
-                minHeight: 100,
-                whiteSpace: 'pre-wrap',
-                lineHeight: 1.6,
-              }}
-            >
+            <div className="p-4 bg-gray-50 rounded min-h-[100px] whitespace-pre-wrap leading-relaxed">
               {viewRecord.content || '(내용 없음)'}
             </div>
           </>

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Space, Tag } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Plus } from 'lucide-react';
+import { Button, Tag } from '@/components/ui';
 import DataGrid, { type DataGridColumn } from '@/components/common/DataGrid';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
 import ExcelDownloadButton from '@/components/common/ExcelDownloadButton';
@@ -226,7 +226,7 @@ export default function ShippingInspectionPage() {
   }, [searchParams]);
 
   return (
-    <div style={{ padding: '16px 24px' }}>
+    <div className="px-6 py-4">
       {/* Search form */}
       <SearchForm
         fields={SEARCH_FIELDS}
@@ -236,9 +236,9 @@ export default function ShippingInspectionPage() {
       />
 
       {/* Toolbar */}
-      <div style={{ marginBottom: 12 }}>
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+      <div className="mb-3">
+        <div className="flex items-center gap-2">
+          <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={handleCreate}>
             검사 등록
           </Button>
           <ExcelDownloadButton
@@ -246,7 +246,7 @@ export default function ShippingInspectionPage() {
             columns={EXCEL_COLUMNS}
             data={getExcelData}
           />
-        </Space>
+        </div>
       </div>
 
       {/* Data grid */}

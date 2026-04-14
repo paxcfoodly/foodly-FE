@@ -1,11 +1,8 @@
 'use client';
 
 import React, { useCallback, useMemo } from 'react';
-import { Table, Typography, Empty } from 'antd';
-import type { TableProps, TablePaginationConfig } from 'antd';
-import type { SorterResult, FilterValue } from 'antd/es/table/interface';
-import type { ColumnsType } from 'antd/es/table';
-import { InboxOutlined } from '@ant-design/icons';
+import Table from '@/components/ui/Table';
+import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -14,6 +11,8 @@ export interface DataGridColumn<T = Record<string, unknown>> {
   title: string;
   /** 데이터 필드 키 */
   dataIndex: string;
+  /** 컬럼 키 (선택) */
+  key?: string;
   /** 컬럼 너비 (px 또는 %) */
   width?: number | string;
   /** 정렬 가능 여부 */
@@ -76,15 +75,15 @@ export interface DataGridProps<T extends Record<string, unknown> = Record<string
   /** 테이블 크기 */
   size?: 'small' | 'middle' | 'large';
   /** 테이블 하단 요약 */
-  summary?: TableProps<T>['summary'];
+  summary?: () => React.ReactNode;
   /** 행 클릭 콜백 */
   onRow?: (record: T, index?: number) => React.HTMLAttributes<HTMLElement>;
-  /** bordered */
+  /** bordered — disabled by default (No-Line rule) */
   bordered?: boolean;
 }
 
 const DEFAULT_PAGE_SIZE = 50;
-const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100'];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 /* ── Component ─────────────────────────────────────── */
 
@@ -106,13 +105,12 @@ export default function DataGrid<T extends Record<string, unknown> = Record<stri
   title,
   emptyText = '데이터가 없습니다.',
   scrollX,
-  size = 'small',
+  size = 'middle',
   summary,
   onRow,
-  bordered = true,
 }: DataGridProps<T>) {
-  /* ── Ant 컬럼 변환 ─── */
-  const antColumns: ColumnsType<T> = useMemo(
+  /* ── 컬럼 변환 ─── */
+  const tableColumns: TableColumn<T>[] = useMemo(
     () =>
       columns.map((col) => ({
         title: col.title,
@@ -123,107 +121,58 @@ export default function DataGrid<T extends Record<string, unknown> = Record<stri
         fixed: col.fixed,
         ellipsis: col.ellipsis ?? true,
         sorter: col.sorter ?? false,
-        sortOrder:
-          sortBy === col.dataIndex
-            ? sortOrder === 'asc'
-              ? ('ascend' as const)
-              : ('descend' as const)
-            : undefined,
-        render: col.render as ColumnsType<T>[number]['render'],
+        render: col.render,
       })),
-    [columns, sortBy, sortOrder],
+    [columns],
   );
 
   /* ── 페이지네이션 설정 ─── */
-  const pagination: TablePaginationConfig | false =
-    total !== undefined
-      ? {
-          current: page,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          pageSizeOptions: PAGE_SIZE_OPTIONS,
-          showTotal: (t: number, range: [number, number]) =>
-            `${range[0]}-${range[1]} / 총 ${t}건`,
-          size: 'small',
-        }
-      : false;
+  const pagination: PaginationConfig | false = useMemo(() => {
+    if (total === undefined) return false;
+    return {
+      current: page,
+      pageSize,
+      total,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
+      onChange: (p: number, ps: number) => {
+        onPageChange?.(p, ps);
+      },
+    };
+  }, [total, page, pageSize, onPageChange]);
 
-  /* ── 행 선택 설정 ─── */
-  const rowSelection: TableProps<T>['rowSelection'] =
-    selectionMode !== 'none'
-      ? {
-          type: selectionMode === 'single' ? 'radio' : 'checkbox',
-          selectedRowKeys: selectedRowKeys ?? [],
-          onChange: (keys: React.Key[], rows: T[]) => {
-            onSelectionChange?.(keys, rows);
-          },
-        }
-      : undefined;
-
-  /* ── onChange 통합 핸들러 ─── */
-  const handleTableChange = useCallback(
-    (
-      pag: TablePaginationConfig,
-      _filters: Record<string, FilterValue | null>,
-      sorter: SorterResult<T> | SorterResult<T>[],
-    ) => {
-      // 페이징
-      if (pag.current && pag.pageSize) {
-        onPageChange?.(pag.current, pag.pageSize);
-      }
-
-      // 정렬 (단일 컬럼)
-      const s = Array.isArray(sorter) ? sorter[0] : sorter;
-      if (s?.field && s.order) {
-        onSortChange?.(
-          String(s.field),
-          s.order === 'ascend' ? 'asc' : 'desc',
-        );
-      } else if (s?.field && !s.order) {
-        // 정렬 해제 → 기본 정렬
-        onSortChange?.('', 'asc');
-      }
+  /* ── 정렬 변경 핸들러 ─── */
+  const handleSortChange = useCallback(
+    (field: string, order: 'asc' | 'desc') => {
+      onSortChange?.(field, order);
     },
-    [onPageChange, onSortChange],
+    [onSortChange],
   );
 
-  /* ── 빈 상태 ─── */
-  const emptyLocale = useMemo(
-    () => ({
-      emptyText: (
-        <Empty
-          image={<InboxOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />}
-          description={emptyText}
-        />
-      ),
-    }),
-    [emptyText],
-  );
+  /* ── onRow 어댑터 (index가 optional → required) ─── */
+  const handleRow = useMemo(() => {
+    if (!onRow) return undefined;
+    return (record: T, index: number) => onRow(record, index) as React.HTMLAttributes<HTMLTableRowElement>;
+  }, [onRow]);
 
   return (
-    <div className="data-grid-wrapper">
-      {title && (
-        <Typography.Title level={5} style={{ marginBottom: 12 }}>
-          {title}
-        </Typography.Title>
-      )}
-      <Table<T>
-        columns={antColumns}
-        dataSource={dataSource}
-        rowKey={rowKey}
-        loading={loading}
-        pagination={pagination}
-        rowSelection={rowSelection}
-        onChange={handleTableChange}
-        locale={emptyLocale}
-        scroll={scrollX ? { x: scrollX } : undefined}
-        size={size}
-        summary={summary}
-        onRow={onRow}
-        bordered={bordered}
-        showSorterTooltip={false}
-      />
-    </div>
+    <Table<T>
+      columns={tableColumns}
+      dataSource={dataSource}
+      rowKey={rowKey}
+      loading={loading}
+      pagination={pagination}
+      sortBy={sortBy}
+      sortOrder={sortOrder}
+      onSortChange={onSortChange ? handleSortChange : undefined}
+      selectionMode={selectionMode}
+      selectedRowKeys={selectedRowKeys ?? []}
+      onSelectionChange={onSelectionChange}
+      emptyText={emptyText}
+      scrollX={scrollX}
+      size={size === 'large' ? 'middle' : size}
+      title={title}
+      summary={summary}
+      onRow={handleRow}
+    />
   );
 }

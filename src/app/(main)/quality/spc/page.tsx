@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { Alert, Col, Row, Spin } from 'antd';
+import { Alert, Spinner } from '@/components/ui';
 import apiClient from '@/lib/apiClient';
 import SpcFilterForm from '@/components/quality/SpcFilterForm';
 import SpcChart from '@/components/quality/SpcChart';
@@ -63,12 +63,12 @@ export default function SpcPage() {
   const labels = data?.subgroups.map((sg) => `${sg.index}`) ?? [];
 
   return (
-    <div style={{ padding: '0 0 24px' }}>
+    <div className="pb-6">
       <SpcFilterForm onSearch={handleSearch} loading={loading} />
 
-      <Spin spinning={loading}>
+      <Spinner spinning={loading}>
         {error && (
-          <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
+          <Alert type="error" message={error} showIcon className="mb-4" />
         )}
 
         {data !== null && data.totalCount < 25 && (
@@ -76,93 +76,57 @@ export default function SpcPage() {
             type="info"
             message="데이터가 25건 미만입니다. SPC 분석을 위해 최소 25건의 검사 데이터가 필요합니다."
             showIcon
-            style={{ marginBottom: 16 }}
+            className="mb-4"
           />
         )}
 
         {data !== null && data.totalCount >= 25 && (
           <>
             {/* Row 1: X-bar chart + R chart */}
-            <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-              <Col xs={24} lg={12}>
-                <div
-                  style={{
-                    background: '#fff',
-                    padding: 16,
-                    borderRadius: 6,
-                    border: '1px solid #f0f0f0',
-                  }}
-                >
-                  <SpcChart
-                    title="X-bar 관리도"
-                    data={data.subgroups.map((sg) => sg.mean)}
-                    ucl={data.ucl_xbar}
-                    lcl={data.lcl_xbar}
-                    centerLine={data.xBar}
-                    labels={labels}
-                  />
-                </div>
-              </Col>
-              <Col xs={24} lg={12}>
-                <div
-                  style={{
-                    background: '#fff',
-                    padding: 16,
-                    borderRadius: 6,
-                    border: '1px solid #f0f0f0',
-                  }}
-                >
-                  <SpcChart
-                    title="R 관리도"
-                    data={data.subgroups.map((sg) => sg.range)}
-                    ucl={data.ucl_r}
-                    lcl={data.lcl_r}
-                    centerLine={data.rBar}
-                    labels={labels}
-                  />
-                </div>
-              </Col>
-            </Row>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="bg-white p-4 rounded-md border border-gray-100">
+                <SpcChart
+                  title="X-bar 관리도"
+                  data={data.subgroups.map((sg) => sg.mean)}
+                  ucl={data.ucl_xbar}
+                  lcl={data.lcl_xbar}
+                  centerLine={data.xBar}
+                  labels={labels}
+                />
+              </div>
+              <div className="bg-white p-4 rounded-md border border-gray-100">
+                <SpcChart
+                  title="R 관리도"
+                  data={data.subgroups.map((sg) => sg.range)}
+                  ucl={data.ucl_r}
+                  lcl={data.lcl_r}
+                  centerLine={data.rBar}
+                  labels={labels}
+                />
+              </div>
+            </div>
 
             {/* Row 2: Histogram + Cp/Cpk */}
-            <Row gutter={[24, 24]}>
-              <Col xs={24} lg={12}>
-                <div
-                  style={{
-                    background: '#fff',
-                    padding: 16,
-                    borderRadius: 6,
-                    border: '1px solid #f0f0f0',
-                  }}
-                >
-                  <HistogramChart
-                    bins={data.histogram}
-                    lsl={data.lsl}
-                    usl={data.usl}
-                  />
-                </div>
-              </Col>
-              <Col xs={24} lg={12}>
-                <div
-                  style={{
-                    background: '#fff',
-                    padding: 16,
-                    borderRadius: 6,
-                    border: '1px solid #f0f0f0',
-                  }}
-                >
-                  <CpkDisplay
-                    cp={data.cp}
-                    cpk={data.cpk}
-                    totalCount={data.totalCount}
-                    subgroupCount={data.subgroups.length}
-                  />
-                </div>
-              </Col>
-            </Row>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-4 rounded-md border border-gray-100">
+                <HistogramChart
+                  bins={data.histogram}
+                  lsl={data.lsl}
+                  usl={data.usl}
+                />
+              </div>
+              <div className="bg-white p-4 rounded-md border border-gray-100">
+                <CpkDisplay
+                  cp={data.cp}
+                  cpk={data.cpk}
+                  totalCount={data.totalCount}
+                  subgroupCount={data.subgroups.length}
+                />
+              </div>
+            </div>
           </>
         )}
-      </Spin>
+      </Spinner>
     </div>
   );
 }

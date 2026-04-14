@@ -1,27 +1,16 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import {
-  Card,
-  DatePicker,
-  Button,
-  Space,
-  Typography,
-  Row,
-  Col,
-  Statistic,
-  Spin,
-} from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { Search } from 'lucide-react';
 import dayjs, { type Dayjs } from 'dayjs';
+import Button from '@/components/ui/Button';
+import Spinner from '@/components/ui/Spinner';
 import OeeGaugeChart from '@/components/equipment/OeeGaugeChart';
 import ProdDailyBarChart from '@/components/reports/ProdDailyBarChart';
 import DefectRateTrendChart from '@/components/reports/DefectRateTrendChart';
 import OeeTrendChart from '@/components/equipment/OeeTrendChart';
 import InventoryBarChart from '@/components/reports/InventoryBarChart';
 import apiClient from '@/lib/apiClient';
-
-const { RangePicker } = DatePicker;
 
 // ─── Types ───
 
@@ -75,7 +64,8 @@ export default function KpiDashboardPage() {
   const defaultStart = now.startOf('month');
   const defaultEnd = now;
 
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([defaultStart, defaultEnd]);
+  const [startDate, setStartDate] = useState(defaultStart.format('YYYY-MM-DD'));
+  const [endDate, setEndDate] = useState(defaultEnd.format('YYYY-MM-DD'));
   const [kpiData, setKpiData] = useState<KpiData>({
     prodAchieveRate: 0,
     defectRate: 0,
@@ -87,9 +77,6 @@ export default function KpiDashboardPage() {
   const [oeeTrendData, setOeeTrendData] = useState<OeeTrendPoint[]>([]);
   const [inventoryData, setInventoryData] = useState<InventoryRow[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const startDate = dateRange[0].format('YYYY-MM-DD');
-  const endDate = dateRange[1].format('YYYY-MM-DD');
 
   const fetchAll = useCallback(async (start: string, end: string) => {
     setLoading(true);
@@ -158,139 +145,131 @@ export default function KpiDashboardPage() {
   const handleSearch = () => fetchAll(startDate, endDate);
 
   const handleThisMonth = () => {
-    const start = dayjs().startOf('month');
-    const end = dayjs();
-    setDateRange([start, end]);
-    fetchAll(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
+    const start = dayjs().startOf('month').format('YYYY-MM-DD');
+    const end = dayjs().format('YYYY-MM-DD');
+    setStartDate(start);
+    setEndDate(end);
+    fetchAll(start, end);
   };
 
   const handleThisWeek = () => {
-    const start = dayjs().startOf('week');
-    const end = dayjs();
-    setDateRange([start, end]);
-    fetchAll(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
+    const start = dayjs().startOf('week').format('YYYY-MM-DD');
+    const end = dayjs().format('YYYY-MM-DD');
+    setStartDate(start);
+    setEndDate(end);
+    fetchAll(start, end);
   };
 
   return (
-    <div style={{ padding: '0 0 24px' }}>
-      <Typography.Title level={4} style={{ marginBottom: 16 }}>
+    <div className="pb-6">
+      <h4 className="text-lg font-semibold text-gray-900 mb-4">
         종합 KPI 대시보드
-      </Typography.Title>
+      </h4>
 
-      {/* Period Filter (inline, no Card wrapper) */}
-      <Space wrap style={{ marginBottom: 24 }}>
+      {/* Period Filter */}
+      <div className="flex items-center gap-3 flex-wrap mb-6">
         <Button onClick={handleThisMonth}>이번달</Button>
         <Button onClick={handleThisWeek}>이번주</Button>
-        <RangePicker
-          value={dateRange}
-          onChange={(vals) => {
-            if (vals && vals[0] && vals[1]) {
-              setDateRange([vals[0], vals[1]]);
-            }
-          }}
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="h-9 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15"
         />
-        <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} loading={loading}>
+        <span className="text-gray-400">~</span>
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="h-9 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15"
+        />
+        <Button variant="primary" icon={<Search className="w-4 h-4" />} onClick={handleSearch} loading={loading}>
           조회
         </Button>
-      </Space>
+      </div>
 
       {/* KPI Cards — 4 columns */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            {loading ? (
-              <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Spin />
-              </div>
-            ) : (
-              <Statistic
-                title="생산 달성률"
-                value={kpiData.prodAchieveRate}
-                suffix="%"
-                precision={1}
-                valueStyle={{ fontSize: 28, fontWeight: 600 }}
-              />
-            )}
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            {loading ? (
-              <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Spin />
-              </div>
-            ) : (
-              <Statistic
-                title="불량률"
-                value={kpiData.defectRate}
-                suffix="%"
-                precision={2}
-                valueStyle={{ fontSize: 28, fontWeight: 600 }}
-              />
-            )}
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            {loading ? (
-              <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Spin />
-              </div>
-            ) : (
-              <OeeGaugeChart title="종합 OEE" value={kpiData.avgOee} hasData={true} />
-            )}
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            {loading ? (
-              <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Spin />
-              </div>
-            ) : (
-              <Statistic
-                title="재고 회전율"
-                value={kpiData.avgTurnover}
-                suffix="회"
-                precision={1}
-                valueStyle={{ fontSize: 28, fontWeight: 600 }}
-              />
-            )}
-          </Card>
-        </Col>
-      </Row>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl p-6 shadow-sm">
+          {loading ? (
+            <div className="h-[80px] flex items-center justify-center">
+              <Spinner />
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-gray-500 mb-1">생산 달성률</p>
+              <p className="text-[28px] font-semibold text-gray-900">
+                {kpiData.prodAchieveRate.toFixed(1)}<span className="text-lg font-normal text-gray-500">%</span>
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="bg-white rounded-xl p-6 shadow-sm">
+          {loading ? (
+            <div className="h-[80px] flex items-center justify-center">
+              <Spinner />
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-gray-500 mb-1">불량률</p>
+              <p className="text-[28px] font-semibold text-gray-900">
+                {kpiData.defectRate.toFixed(2)}<span className="text-lg font-normal text-gray-500">%</span>
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="bg-white rounded-xl p-6 shadow-sm">
+          {loading ? (
+            <div className="h-[200px] flex items-center justify-center">
+              <Spinner />
+            </div>
+          ) : (
+            <OeeGaugeChart title="종합 OEE" value={kpiData.avgOee} hasData={true} />
+          )}
+        </div>
+        <div className="bg-white rounded-xl p-6 shadow-sm">
+          {loading ? (
+            <div className="h-[80px] flex items-center justify-center">
+              <Spinner />
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-gray-500 mb-1">재고 회전율</p>
+              <p className="text-[28px] font-semibold text-gray-900">
+                {kpiData.avgTurnover.toFixed(1)}<span className="text-lg font-normal text-gray-500">회</span>
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Mini Charts Row */}
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card size="small" title="생산추이">
-            <div style={{ height: 160, overflow: 'hidden' }}>
-              <ProdDailyBarChart data={prodDailyData} />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card size="small" title="불량률 추이">
-            <div style={{ height: 160, overflow: 'hidden' }}>
-              <DefectRateTrendChart data={defectTrendData} />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card size="small" title="OEE 추이">
-            <div style={{ height: 160, overflow: 'hidden' }}>
-              <OeeTrendChart data={oeeTrendData} />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card size="small" title="재고현황">
-            <div style={{ height: 160, overflow: 'hidden' }}>
-              <InventoryBarChart data={inventoryData} />
-            </div>
-          </Card>
-        </Col>
-      </Row>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <h5 className="text-sm font-semibold text-gray-700 mb-2">생산추이</h5>
+          <div className="h-[160px] overflow-hidden">
+            <ProdDailyBarChart data={prodDailyData} />
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <h5 className="text-sm font-semibold text-gray-700 mb-2">불량률 추이</h5>
+          <div className="h-[160px] overflow-hidden">
+            <DefectRateTrendChart data={defectTrendData} />
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <h5 className="text-sm font-semibold text-gray-700 mb-2">OEE 추이</h5>
+          <div className="h-[160px] overflow-hidden">
+            <OeeTrendChart data={oeeTrendData} />
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <h5 className="text-sm font-semibold text-gray-700 mb-2">재고현황</h5>
+          <div className="h-[160px] overflow-hidden">
+            <InventoryBarChart data={inventoryData} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

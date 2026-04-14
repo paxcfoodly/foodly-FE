@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Popover, Badge, Radio, Input, Button, Space, Typography, message } from 'antd';
-import type { RadioChangeEvent } from 'antd';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Input';
+import toast from '@/components/ui/toast';
 import CommonCodeSelect from '@/components/common/CommonCodeSelect';
 import apiClient from '@/lib/apiClient';
 
@@ -18,6 +21,13 @@ const STATUS_LABELS: Record<string, string> = {
   IDLE: '비가동',
   DOWN: '고장',
   SETUP: '점검',
+};
+
+const STATUS_BADGE: Record<string, 'success' | 'warning' | 'error' | 'processing' | 'default'> = {
+  RUN: 'success',
+  IDLE: 'warning',
+  DOWN: 'error',
+  SETUP: 'warning',
 };
 
 const NON_RUN_STATUSES = ['IDLE', 'DOWN', 'SETUP'];
@@ -44,8 +54,8 @@ export default function StatusTogglePopover({
 
   const isSaveEnabled = requiresDownReason ? !!downReason : true;
 
-  const handleStatusChange = (e: RadioChangeEvent) => {
-    setSelectedStatus(e.target.value as string);
+  const handleStatusChange = (value: string) => {
+    setSelectedStatus(value);
     setDownReason(undefined);
     setDownReasonError(false);
   };
@@ -63,11 +73,11 @@ export default function StatusTogglePopover({
         down_reason_cd: downReason,
         memo: memo || undefined,
       });
-      message.success('설비 상태가 변경되었습니다.');
+      toast.success('설비 상태가 변경되었습니다.');
       setOpen(false);
       onSuccess();
     } catch {
-      message.error('상태 변경에 실패했습니다. 다시 시도해주세요.');
+      toast.error('상태 변경에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setSaving(false);
     }
@@ -77,88 +87,97 @@ export default function StatusTogglePopover({
     setOpen(false);
   };
 
-  const handleOpenChange = (visible: boolean) => {
-    if (visible) {
+  const handleToggle = () => {
+    if (!open) {
+      // Reset on open
       setSelectedStatus(currentStatus ?? 'RUN');
       setDownReason(undefined);
       setMemo('');
       setDownReasonError(false);
     }
-    setOpen(visible);
+    setOpen(!open);
   };
 
-  const content = (
-    <div style={{ width: 280 }}>
-      <Radio.Group
-        value={selectedStatus}
-        onChange={handleStatusChange}
-        style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}
-      >
-        {Object.entries(STATUS_LABELS).map(([value, label]) => (
-          <Radio key={value} value={value}>
-            <Badge color={STATUS_COLORS[value]} text={label} />
-          </Radio>
-        ))}
-      </Radio.Group>
-
-      {requiresDownReason && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ marginBottom: 4, fontSize: 12, color: '#595959' }}>
-            비가동 사유 <span style={{ color: '#ff4d4f' }}>*</span>
-          </div>
-          <CommonCodeSelect
-            groupCd="DOWN_REASON"
-            value={downReason}
-            onChange={(val: string) => {
-              setDownReason(val);
-              setDownReasonError(false);
-            }}
-            placeholder="비가동 사유 선택"
-            style={{ width: '100%' }}
-          />
-          {downReasonError && (
-            <Typography.Text type="danger" style={{ fontSize: 12 }}>
-              비가동 사유를 선택해주세요.
-            </Typography.Text>
-          )}
-        </div>
-      )}
-
-      <Input.TextArea
-        placeholder="변경 사유 또는 메모 (선택)"
-        value={memo}
-        onChange={(e) => setMemo(e.target.value)}
-        rows={2}
-        style={{ marginBottom: 12 }}
-      />
-
-      <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-        <Button onClick={handleClose}>닫기</Button>
-        <Button
-          type="primary"
-          onClick={handleSave}
-          loading={saving}
-          disabled={!isSaveEnabled}
-        >
-          상태 저장
-        </Button>
-      </Space>
-    </div>
-  );
-
   return (
-    <Popover
-      content={content}
-      title="설비 상태 변경"
-      trigger="click"
-      open={open}
-      onOpenChange={handleOpenChange}
-    >
-      <Badge
-        color={STATUS_COLORS[currentStatus ?? 'RUN'] ?? '#d9d9d9'}
-        text={STATUS_LABELS[currentStatus ?? 'RUN'] ?? currentStatus ?? '-'}
-        style={{ cursor: 'pointer' }}
-      />
-    </Popover>
+    <div className="relative inline-block">
+      <button onClick={handleToggle} className="cursor-pointer">
+        <Badge
+          status={STATUS_BADGE[currentStatus ?? 'RUN'] ?? 'default'}
+          text={STATUS_LABELS[currentStatus ?? 'RUN'] ?? currentStatus ?? '-'}
+        />
+      </button>
+
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-40" onClick={handleClose} />
+
+          {/* Popover content */}
+          <div className="absolute top-full left-0 mt-1 z-50 bg-white rounded-xl shadow-lg border border-gray-100 p-4 w-[300px]">
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">설비 상태 변경</h4>
+
+            <div className="flex flex-col gap-2 mb-3">
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <label key={value} className="inline-flex items-center gap-2 cursor-pointer text-sm">
+                  <input
+                    type="radio"
+                    name="equip_status"
+                    value={value}
+                    checked={selectedStatus === value}
+                    onChange={() => handleStatusChange(value)}
+                    className="accent-cyan-accent"
+                  />
+                  <Badge status={STATUS_BADGE[value] ?? 'default'} text={label} />
+                </label>
+              ))}
+            </div>
+
+            {requiresDownReason && (
+              <div className="mb-3">
+                <div className="mb-1 text-xs text-gray-500">
+                  비가동 사유 <span className="text-red-500">*</span>
+                </div>
+                <CommonCodeSelect
+                  groupCd="DOWN_REASON"
+                  value={downReason}
+                  onChange={(e) => {
+                    setDownReason(e.target.value);
+                    setDownReasonError(false);
+                  }}
+                  placeholder="비가동 사유 선택"
+                  style={{ width: '100%' }}
+                />
+                {downReasonError && (
+                  <p className="text-xs text-red-500 mt-1">
+                    비가동 사유를 선택해주세요.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <Textarea
+              placeholder="변경 사유 또는 메모 (선택)"
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              rows={2}
+              className="mb-3"
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button size="small" onClick={handleClose}>닫기</Button>
+              <Button
+                size="small"
+                variant="primary"
+                onClick={handleSave}
+                loading={saving}
+                disabled={!isSaveEnabled}
+              >
+                상태 저장
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Drawer, Timeline, Spin, Empty, Tag, Typography, Pagination } from 'antd';
-import { ClockCircleOutlined } from '@ant-design/icons';
+import { Clock } from 'lucide-react';
+import Drawer from '@/components/ui/Drawer';
+import Spinner from '@/components/ui/Spinner';
+import Empty from '@/components/ui/Empty';
+import Tag from '@/components/ui/Tag';
 import dayjs from 'dayjs';
 import apiClient from '@/lib/apiClient';
 import type { PaginationMeta } from '@/types';
-
-const { Text } = Typography;
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -45,7 +46,7 @@ export interface DataHistoryDrawerProps {
 
 /* ── Action Tag Color ────────────────────────────── */
 
-const ACTION_COLOR: Record<string, string> = {
+const ACTION_COLOR: Record<string, 'green' | 'blue' | 'red'> = {
   INSERT: 'green',
   UPDATE: 'blue',
   DELETE: 'red',
@@ -116,20 +117,18 @@ export default function DataHistoryDrawer({
   const renderChanges = (changes: ColumnChange[] | null) => {
     if (!changes || changes.length === 0) return null;
     return (
-      <div style={{ marginTop: 4 }}>
+      <div className="mt-1">
         {changes.map((c, i) => (
-          <div key={i} style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>
-            <Text strong style={{ fontSize: 12 }}>
-              {c.column}
-            </Text>
+          <div key={i} className="text-xs text-gray-500 mb-0.5">
+            <span className="font-semibold text-xs">{c.column}</span>
             {': '}
-            <Text delete type="secondary" style={{ fontSize: 12 }}>
+            <span className="line-through text-gray-400 text-xs">
               {c.oldValue ?? '(없음)'}
-            </Text>
+            </span>
             {' → '}
-            <Text style={{ fontSize: 12, color: '#1677ff' }}>
+            <span className="text-blue-600 text-xs">
               {c.newValue ?? '(없음)'}
-            </Text>
+            </span>
           </div>
         ))}
       </div>
@@ -142,56 +141,75 @@ export default function DataHistoryDrawer({
       onClose={onClose}
       title={title}
       width={width}
-      destroyOnClose
     >
-      <Spin spinning={loading}>
+      <Spinner spinning={loading}>
         {items.length === 0 && !loading ? (
           <Empty description="변경 이력이 없습니다." />
         ) : (
           <>
-            <Timeline
-              items={items.map((item) => ({
-                dot: <ClockCircleOutlined style={{ fontSize: 14 }} />,
-                children: (
-                  <div>
-                    <div style={{ marginBottom: 4 }}>
-                      <Tag color={ACTION_COLOR[item.action] ?? 'default'}>
+            {/* Timeline as a simple list */}
+            <div className="relative pl-6">
+              {/* Vertical line */}
+              <div className="absolute left-[9px] top-0 bottom-0 w-px bg-dark-500" />
+
+              {items.map((item) => (
+                <div key={item.id} className="relative pb-6 last:pb-0">
+                  {/* Dot */}
+                  <div className="absolute left-[-15px] top-0.5 w-5 h-5 rounded-full bg-white border-2 border-dark-500 flex items-center justify-center">
+                    <Clock className="w-3 h-3 text-gray-400" />
+                  </div>
+
+                  {/* Content */}
+                  <div className="ml-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Tag color={ACTION_COLOR[item.action] ?? 'gray'}>
                         {ACTION_LABEL[item.action] ?? item.action}
                       </Tag>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
+                      <span className="text-xs text-gray-400">
                         {dayjs(item.changed_at).format('YYYY-MM-DD HH:mm:ss')}
-                      </Text>
+                      </span>
                       {item.changed_by && (
-                        <Text style={{ fontSize: 12, marginLeft: 8 }}>
+                        <span className="text-xs text-gray-600 ml-1">
                           by {item.changed_by}
-                        </Text>
+                        </span>
                       )}
                     </div>
                     {renderChanges(item.changed_columns)}
                     {item.remark && (
-                      <Text type="secondary" style={{ fontSize: 11 }}>
-                        {item.remark}
-                      </Text>
+                      <p className="text-[11px] text-gray-400">{item.remark}</p>
                     )}
                   </div>
-                ),
-              }))}
-            />
+                </div>
+              ))}
+            </div>
+
+            {/* Simple pagination */}
             {pagination.totalPages > 1 && (
-              <div style={{ textAlign: 'center', marginTop: 16 }}>
-                <Pagination
-                  size="small"
-                  current={pagination.page}
-                  total={pagination.total}
-                  pageSize={pagination.pageSize}
-                  onChange={handlePageChange}
-                  showSizeChanger={false}
-                />
+              <div className="flex justify-center items-center gap-1 mt-6">
+                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                  .slice(
+                    Math.max(0, pagination.page - 3),
+                    pagination.page + 2,
+                  )
+                  .map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => handlePageChange(p)}
+                      className={`
+                        w-7 h-7 rounded text-xs font-medium transition-colors
+                        ${p === pagination.page
+                          ? 'bg-cyan-accent text-white'
+                          : 'text-gray-600 hover:bg-dark-700'}
+                      `}
+                    >
+                      {p}
+                    </button>
+                  ))}
               </div>
             )}
           </>
         )}
-      </Spin>
+      </Spinner>
     </Drawer>
   );
 }

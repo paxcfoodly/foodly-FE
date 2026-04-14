@@ -1,18 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  Button,
-  Form,
-  Input,
-  Modal,
-  Select,
-  Space,
-  Spin,
-  Tag,
-  message,
-} from 'antd';
+import { Button, Modal, Tag, Spinner, Alert } from '@/components/ui';
+import toast from '@/components/ui/toast';
 import apiClient from '@/lib/apiClient';
 import InspectionDetailTable, { type InspectStdRow } from './InspectionDetailTable';
 
@@ -81,7 +71,6 @@ export default function InspectionFormModal({
   onClose,
   onSaved,
 }: InspectionFormModalProps) {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -90,6 +79,13 @@ export default function InspectionFormModal({
   const [processes, setProcesses] = useState<ProcessOption[]>([]);
   const [lots, setLots] = useState<LotOption[]>([]);
   const [items, setItems] = useState<ItemOption[]>([]);
+
+  /* Form fields */
+  const [formWoId, setFormWoId] = useState<string>('');
+  const [formProcessCd, setFormProcessCd] = useState<string>('');
+  const [formLotNo, setFormLotNo] = useState<string>('');
+  const [formItemCd, setFormItemCd] = useState<string>('');
+  const [formRemark, setFormRemark] = useState<string>('');
 
   /* Selected fields */
   const [selectedItemCd, setSelectedItemCd] = useState<string | null>(null);
@@ -101,18 +97,26 @@ export default function InspectionFormModal({
   const [stdLoading, setStdLoading] = useState(false);
   const [noStandards, setNoStandards] = useState(false);
 
+  /* Validation */
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   /* ── Load reference data on open ──────────────────── */
   useEffect(() => {
     if (!open) return;
 
     if (mode === 'create') {
       // Reset form state
-      form.resetFields();
+      setFormWoId('');
+      setFormProcessCd('');
+      setFormLotNo('');
+      setFormItemCd('');
+      setFormRemark('');
       setStandards([]);
       setValues({});
       setNoStandards(false);
       setSelectedItemCd(null);
       setSelectedProcessCd(null);
+      setErrors({});
 
       // Fetch work orders for PROCESS type
       if (inspectType === 'PROCESS') {
@@ -185,7 +189,7 @@ export default function InspectionFormModal({
         setStandards(stds);
       }
     }
-  }, [open, mode, inspectType, record, form]);
+  }, [open, mode, inspectType, record]);
 
   /* ── Fetch standards when item_cd (and process_cd for PROCESS) change ── */
   const fetchStandards = useCallback(
@@ -225,22 +229,24 @@ export default function InspectionFormModal({
 
   /* ── Handle work order selection (PROCESS) ─────── */
   const handleWoChange = useCallback(
-    (woId: number) => {
-      const wo = workOrders.find((w) => w.wo_id === woId);
+    (woId: string) => {
+      setFormWoId(woId);
+      const wo = workOrders.find((w) => w.wo_id === Number(woId));
       if (wo?.item_cd) {
-        form.setFieldValue('item_cd', wo.item_cd);
+        setFormItemCd(wo.item_cd);
         setSelectedItemCd(wo.item_cd);
         if (selectedProcessCd) {
           fetchStandards(wo.item_cd, selectedProcessCd);
         }
       }
     },
-    [workOrders, form, selectedProcessCd, fetchStandards],
+    [workOrders, selectedProcessCd, fetchStandards],
   );
 
   /* ── Handle process selection (PROCESS) ────────── */
   const handleProcessChange = useCallback(
     (processCd: string) => {
+      setFormProcessCd(processCd);
       setSelectedProcessCd(processCd);
       if (selectedItemCd) {
         fetchStandards(selectedItemCd, processCd);
@@ -252,19 +258,21 @@ export default function InspectionFormModal({
   /* ── Handle LOT selection (SHIPPING) ───────────── */
   const handleLotChange = useCallback(
     (lotNo: string) => {
+      setFormLotNo(lotNo);
       const lot = lots.find((l) => l.lot_no === lotNo);
       if (lot?.item_cd) {
-        form.setFieldValue('item_cd', lot.item_cd);
+        setFormItemCd(lot.item_cd);
         setSelectedItemCd(lot.item_cd);
         fetchStandards(lot.item_cd);
       }
     },
-    [lots, form, fetchStandards],
+    [lots, fetchStandards],
   );
 
   /* ── Handle item selection (manual) ────────────── */
   const handleItemChange = useCallback(
     (itemCd: string) => {
+      setFormItemCd(itemCd);
       setSelectedItemCd(itemCd);
       if (inspectType === 'PROCESS' && selectedProcessCd) {
         fetchStandards(itemCd, selectedProcessCd);
@@ -285,8 +293,18 @@ export default function InspectionFormModal({
 
   /* ── Save handler ─────────────────────────────── */
   const handleSave = useCallback(async () => {
+    // Validate
+    const newErrors: Record<string, string> = {};
+    if (!formLotNo) newErrors.lot_no = 'LOT번호를 입력해 주세요.';
+    if (!formItemCd) newErrors.item_cd = '품목을 선택해 주세요.';
+    if (inspectType === 'PROCESS' && !formProcessCd) newErrors.process_cd = '공정을 선택해 주세요.';
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     try {
-      const fields = await form.validateFields();
       setSaving(true);
 
       const details = standards.map((s) => ({
@@ -296,33 +314,32 @@ export default function InspectionFormModal({
 
       const payload = {
         inspect_type: inspectType,
-        item_cd: fields.item_cd,
-        lot_no: fields.lot_no,
-        wo_id: fields.wo_id ?? null,
-        process_cd: fields.process_cd ?? null,
-        remark: fields.remark ?? null,
+        item_cd: formItemCd,
+        lot_no: formLotNo,
+        wo_id: formWoId ? Number(formWoId) : null,
+        process_cd: formProcessCd || null,
+        remark: formRemark || null,
         details,
       };
 
       const res = await apiClient.post('/v1/inspect-results', payload);
       const savedRecord = res.data?.data;
-      message.success('검사가 등록되었습니다.');
+      toast.success('검사가 등록되었습니다.');
 
       // Show quarantine warning if overall judge is FAIL
       if (savedRecord?.judge === 'FAIL' && payload.lot_no) {
-        message.warning(`Lot ${payload.lot_no} 불합격 - 격리 상태로 전환되었습니다.`);
+        toast.warning(`Lot ${payload.lot_no} 불합격 - 격리 상태로 전환되었습니다.`);
       }
 
       onSaved();
       onClose();
     } catch (err: unknown) {
-      const e = err as { errorFields?: unknown; message?: string };
-      if (e?.errorFields) return; // validation error — antd shows it
-      message.error(e?.message ?? '저장 중 오류가 발생했습니다.');
+      const e = err as { message?: string };
+      toast.error(e?.message ?? '저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
-  }, [form, standards, values, inspectType, onSaved, onClose]);
+  }, [formLotNo, formItemCd, formProcessCd, formWoId, formRemark, inspectType, standards, values, onSaved, onClose]);
 
   /* ── Modal title ─────────────────────────────── */
   const modalTitle = mode === 'create' ? '검사 등록' : '검사 상세';
@@ -339,121 +356,127 @@ export default function InspectionFormModal({
   const footer = mode === 'view' ? (
     <Button onClick={onClose}>닫기</Button>
   ) : (
-    <Space>
+    <div className="flex items-center gap-2">
       <Button onClick={onClose}>취소</Button>
-      <Button type="primary" loading={saving} onClick={handleSave}>
+      <Button variant="primary" loading={saving} onClick={handleSave}>
         등록
       </Button>
-    </Space>
+    </div>
   );
 
   return (
     <Modal
       open={open}
       title={
-        <Space>
+        <div className="flex items-center gap-2">
           {modalTitle}
           {renderOverallJudge()}
-        </Space>
+        </div>
       }
       width={960}
-      destroyOnClose
       maskClosable={false}
       footer={footer}
-      onCancel={onClose}
+      onClose={onClose}
     >
-      <Spin spinning={loading}>
-        <Form
-          form={form}
-          layout="vertical"
-          disabled={mode === 'view'}
-          autoComplete="off"
-        >
+      <Spinner spinning={loading}>
+        <div className={mode === 'view' ? 'pointer-events-none opacity-70' : ''}>
           {/* Header fields */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             {inspectType === 'PROCESS' && (
               <>
-                <Form.Item name="wo_id" label="작업지시">
-                  <Select
-                    placeholder="작업지시 선택"
-                    showSearch
-                    allowClear
-                    optionFilterProp="label"
-                    options={workOrders.map((wo) => ({
-                      value: wo.wo_id,
-                      label: `${wo.wo_no}${wo.item ? ` (${wo.item.item_nm})` : ''}`,
-                    }))}
-                    onChange={handleWoChange}
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="process_cd"
-                  label="공정"
-                  rules={[{ required: true, message: '공정을 선택해 주세요.' }]}
-                >
-                  <Select
-                    placeholder="공정 선택"
-                    showSearch
-                    allowClear
-                    optionFilterProp="label"
-                    options={processes.map((p) => ({
-                      value: p.process_cd,
-                      label: p.process_nm,
-                    }))}
-                    onChange={handleProcessChange}
-                  />
-                </Form.Item>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">작업지시</label>
+                  <select
+                    className="w-full h-9 bg-gray-50 border border-gray-200 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500"
+                    value={formWoId}
+                    onChange={(e) => handleWoChange(e.target.value)}
+                    disabled={mode === 'view'}
+                  >
+                    <option value="">작업지시 선택</option>
+                    {workOrders.map((wo) => (
+                      <option key={wo.wo_id} value={wo.wo_id}>
+                        {wo.wo_no}{wo.item ? ` (${wo.item.item_nm})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    공정 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className={`w-full h-9 bg-gray-50 border rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500 ${errors.process_cd ? 'border-red-400' : 'border-gray-200'}`}
+                    value={formProcessCd}
+                    onChange={(e) => handleProcessChange(e.target.value)}
+                    disabled={mode === 'view'}
+                  >
+                    <option value="">공정 선택</option>
+                    {processes.map((p) => (
+                      <option key={p.process_cd} value={p.process_cd}>{p.process_nm}</option>
+                    ))}
+                  </select>
+                  {errors.process_cd && <p className="text-red-500 text-xs mt-1">{errors.process_cd}</p>}
+                </div>
               </>
             )}
 
-            <Form.Item
-              name="lot_no"
-              label="LOT번호"
-              rules={[{ required: true, message: 'LOT번호를 입력해 주세요.' }]}
-            >
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">
+                LOT번호 <span className="text-red-500">*</span>
+              </label>
               {inspectType === 'SHIPPING' ? (
-                <Select
-                  placeholder="LOT번호 선택"
-                  showSearch
-                  allowClear
-                  optionFilterProp="label"
-                  options={lots.map((l) => ({
-                    value: l.lot_no,
-                    label: l.lot_no,
-                  }))}
-                  onChange={handleLotChange}
-                />
+                <select
+                  className={`w-full h-9 bg-gray-50 border rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500 ${errors.lot_no ? 'border-red-400' : 'border-gray-200'}`}
+                  value={formLotNo}
+                  onChange={(e) => handleLotChange(e.target.value)}
+                  disabled={mode === 'view'}
+                >
+                  <option value="">LOT번호 선택</option>
+                  {lots.map((l) => (
+                    <option key={l.lot_no} value={l.lot_no}>{l.lot_no}</option>
+                  ))}
+                </select>
               ) : (
-                <Input
+                <input
+                  className={`w-full h-9 bg-gray-50 border rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500 ${errors.lot_no ? 'border-red-400' : 'border-gray-200'}`}
                   placeholder="LOT번호 입력"
-                  onChange={(e) => {
-                    // For PROCESS, lot_no is free text
-                  }}
+                  value={formLotNo}
+                  onChange={(e) => setFormLotNo(e.target.value)}
+                  disabled={mode === 'view'}
                 />
               )}
-            </Form.Item>
+              {errors.lot_no && <p className="text-red-500 text-xs mt-1">{errors.lot_no}</p>}
+            </div>
 
-            <Form.Item
-              name="item_cd"
-              label="품목"
-              rules={[{ required: true, message: '품목을 선택해 주세요.' }]}
-            >
-              <Select
-                placeholder="품목 선택"
-                showSearch
-                allowClear
-                optionFilterProp="label"
-                options={items.map((i) => ({
-                  value: i.item_cd,
-                  label: i.item_nm,
-                }))}
-                onChange={handleItemChange}
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">
+                품목 <span className="text-red-500">*</span>
+              </label>
+              <select
+                className={`w-full h-9 bg-gray-50 border rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500 ${errors.item_cd ? 'border-red-400' : 'border-gray-200'}`}
+                value={formItemCd}
+                onChange={(e) => handleItemChange(e.target.value)}
+                disabled={mode === 'view'}
+              >
+                <option value="">품목 선택</option>
+                {items.map((i) => (
+                  <option key={i.item_cd} value={i.item_cd}>{i.item_nm}</option>
+                ))}
+              </select>
+              {errors.item_cd && <p className="text-red-500 text-xs mt-1">{errors.item_cd}</p>}
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-600 mb-1">비고</label>
+              <textarea
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-cyan-500"
+                rows={2}
+                placeholder="비고 입력"
+                value={formRemark}
+                onChange={(e) => setFormRemark(e.target.value)}
+                disabled={mode === 'view'}
               />
-            </Form.Item>
-
-            <Form.Item name="remark" label="비고" style={{ gridColumn: '1 / -1' }}>
-              <Input.TextArea rows={2} placeholder="비고 입력" />
-            </Form.Item>
+            </div>
           </div>
 
           {/* Standards section */}
@@ -462,24 +485,26 @@ export default function InspectionFormModal({
               type="warning"
               showIcon
               message="해당 품목/공정의 검사기준이 없습니다. 검사기준 관리에서 먼저 등록해 주세요."
-              style={{ marginBottom: 12 }}
+              className="mt-3"
             />
           )}
 
           {stdLoading ? (
-            <div style={{ textAlign: 'center', padding: 24 }}>
-              <Spin />
+            <div className="text-center py-6">
+              <Spinner />
             </div>
           ) : standards.length > 0 ? (
-            <InspectionDetailTable
-              standards={standards}
-              values={values}
-              onValueChange={handleValueChange}
-              readOnly={mode === 'view'}
-            />
+            <div className="mt-4">
+              <InspectionDetailTable
+                standards={standards}
+                values={values}
+                onValueChange={handleValueChange}
+                readOnly={mode === 'view'}
+              />
+            </div>
           ) : null}
-        </Form>
-      </Spin>
+        </div>
+      </Spinner>
     </Modal>
   );
 }

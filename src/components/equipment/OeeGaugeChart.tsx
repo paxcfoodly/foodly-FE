@@ -2,7 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { Tooltip } from 'antd';
+import Tooltip from '@/components/ui/Tooltip';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 

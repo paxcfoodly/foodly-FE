@@ -1,17 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Modal,
-  Form,
-  InputNumber,
-  Select,
-  Radio,
-  Input,
-  Button,
-  Space,
-  message,
-} from 'antd';
+import { Button, Modal } from '@/components/ui';
+import toast from '@/components/ui/toast';
 import apiClient from '@/lib/apiClient';
 
 /* ── Types ──────────────────────────────────────────── */
@@ -38,10 +29,13 @@ export default function DisposeFormModal({
   onClose,
   onSaved,
 }: DisposeFormModalProps) {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [disposeType, setDisposeType] = useState<string>('REWORK');
+  const [disposeQty, setDisposeQty] = useState<string>('');
+  const [approveBy, setApproveBy] = useState<string>('');
+  const [remark, setRemark] = useState<string>('');
   const [userOptions, setUserOptions] = useState<{ label: string; value: string }[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   /* ── Load users for approver select ─── */
   useEffect(() => {
@@ -64,56 +58,67 @@ export default function DisposeFormModal({
   /* ── Reset on open ─── */
   useEffect(() => {
     if (open) {
-      form.resetFields();
       setDisposeType('REWORK');
+      setDisposeQty('');
+      setApproveBy('');
+      setRemark('');
+      setErrors({});
     }
-  }, [open, form]);
+  }, [open]);
 
   /* ── Save handler ─── */
   const handleSave = useCallback(async () => {
+    const newErrors: Record<string, string> = {};
+    if (!disposeType) newErrors.dispose_type = '처리유형을 선택하세요.';
+    if (!disposeQty || Number(disposeQty) < 1) newErrors.dispose_qty = '1 이상의 값을 입력하세요.';
+    if (disposeType === 'CONCESSION' && !approveBy) newErrors.approve_by = '특채(CONCESSION) 처리 시 승인자를 선택해야 합니다.';
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     try {
-      const values = await form.validateFields();
       setLoading(true);
 
       const payload: Record<string, unknown> = {
-        dispose_type: values.dispose_type,
-        dispose_qty: values.dispose_qty,
+        dispose_type: disposeType,
+        dispose_qty: Number(disposeQty),
       };
-      if (values.approve_by) payload.approve_by = values.approve_by;
-      if (values.remark) payload.remark = values.remark;
+      if (approveBy) payload.approve_by = approveBy;
+      if (remark) payload.remark = remark;
 
       await apiClient.post(`/v1/defects/${defectId}/disposals`, payload);
-      message.success('후속조치가 등록되었습니다.');
-      form.resetFields();
+      toast.success('후속조치가 등록되었습니다.');
       onSaved();
       onClose();
     } catch (err: any) {
-      if (err?.errorFields) return;
-      message.error(err?.response?.data?.message ?? '저장 중 오류가 발생했습니다.');
+      toast.error(err?.response?.data?.message ?? '저장 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
-  }, [form, defectId, onSaved, onClose]);
+  }, [disposeType, disposeQty, approveBy, remark, defectId, onSaved, onClose]);
 
   /* ── Dispose type change ─── */
   const handleDisposeTypeChange = useCallback(
     (val: string) => {
       setDisposeType(val);
-      // Clear approve_by when switching away from CONCESSION
       if (val !== 'CONCESSION') {
-        form.setFieldValue('approve_by', undefined);
+        setApproveBy('');
       }
     },
-    [form],
+    [],
   );
 
+  const requiresDownReason = disposeType === 'CONCESSION';
+
   const footer = (
-    <Space>
+    <div className="flex items-center gap-2">
       <Button onClick={onClose}>취소</Button>
-      <Button type="primary" loading={loading} onClick={handleSave}>
+      <Button variant="primary" loading={loading} onClick={handleSave}>
         등록
       </Button>
-    </Space>
+    </div>
   );
 
   return (
@@ -121,68 +126,87 @@ export default function DisposeFormModal({
       open={open}
       title="후속조치 등록"
       width={640}
-      destroyOnClose
       maskClosable={false}
       footer={footer}
-      onCancel={onClose}
+      onClose={onClose}
     >
-      <Form
-        form={form}
-        layout="horizontal"
-        labelCol={{ span: 6 }}
-        wrapperCol={{ span: 18 }}
-        initialValues={{ dispose_type: 'REWORK' }}
-        autoComplete="off"
-      >
-        <Form.Item
-          name="dispose_type"
-          label="처리유형"
-          rules={[{ required: true, message: '처리유형을 선택하세요.' }]}
-        >
-          <Radio.Group onChange={(e) => handleDisposeTypeChange(e.target.value)}>
-            <Radio value="REWORK">재작업</Radio>
-            <Radio value="SCRAP">폐기</Radio>
-            <Radio value="CONCESSION">특채</Radio>
-          </Radio.Group>
-        </Form.Item>
+      <div className="space-y-4">
+        {/* Dispose type */}
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-2">
+            처리유형 <span className="text-red-500">*</span>
+          </label>
+          <div className="flex items-center gap-4">
+            {[
+              { value: 'REWORK', label: '재작업' },
+              { value: 'SCRAP', label: '폐기' },
+              { value: 'CONCESSION', label: '특채' },
+            ].map((opt) => (
+              <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer text-sm">
+                <input
+                  type="radio"
+                  name="dispose_type"
+                  value={opt.value}
+                  checked={disposeType === opt.value}
+                  onChange={(e) => handleDisposeTypeChange(e.target.value)}
+                  className="accent-cyan-600"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+          {errors.dispose_type && <p className="text-red-500 text-xs mt-1">{errors.dispose_type}</p>}
+        </div>
 
-        <Form.Item
-          name="dispose_qty"
-          label="처리수량"
-          rules={[
-            { required: true, message: '처리수량을 입력하세요.' },
-            { type: 'number', min: 1, message: '1 이상의 값을 입력하세요.' },
-          ]}
-        >
-          <InputNumber min={1} style={{ width: '100%' }} placeholder="처리 수량" precision={0} />
-        </Form.Item>
-
-        <Form.Item
-          name="approve_by"
-          label="승인자"
-          rules={[
-            {
-              required: disposeType === 'CONCESSION',
-              message: '특채(CONCESSION) 처리 시 승인자를 선택해야 합니다.',
-            },
-          ]}
-        >
-          <Select
-            placeholder={
-              disposeType === 'CONCESSION' ? '승인자 선택 (필수)' : '승인자 선택 (선택사항)'
-            }
-            options={userOptions}
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            disabled={userOptions.length === 0}
+        {/* Dispose qty */}
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            처리수량 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            className={`w-full h-9 bg-gray-50 border rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500 ${errors.dispose_qty ? 'border-red-400' : 'border-gray-200'}`}
+            min={1}
+            placeholder="처리 수량"
+            value={disposeQty}
+            onChange={(e) => setDisposeQty(e.target.value)}
           />
-        </Form.Item>
+          {errors.dispose_qty && <p className="text-red-500 text-xs mt-1">{errors.dispose_qty}</p>}
+        </div>
 
-        <Form.Item name="remark" label="비고">
-          <Input.TextArea rows={3} placeholder="비고 입력" />
-        </Form.Item>
-      </Form>
+        {/* Approver */}
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            승인자 {requiresDownReason && <span className="text-red-500">*</span>}
+          </label>
+          <select
+            className={`w-full h-9 bg-gray-50 border rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:border-cyan-500 ${errors.approve_by ? 'border-red-400' : 'border-gray-200'}`}
+            value={approveBy}
+            onChange={(e) => setApproveBy(e.target.value)}
+            disabled={userOptions.length === 0}
+          >
+            <option value="">
+              {requiresDownReason ? '승인자 선택 (필수)' : '승인자 선택 (선택사항)'}
+            </option>
+            {userOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          {errors.approve_by && <p className="text-red-500 text-xs mt-1">{errors.approve_by}</p>}
+        </div>
+
+        {/* Remark */}
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">비고</label>
+          <textarea
+            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-cyan-500"
+            rows={3}
+            placeholder="비고 입력"
+            value={remark}
+            onChange={(e) => setRemark(e.target.value)}
+          />
+        </div>
+      </div>
     </Modal>
   );
 }

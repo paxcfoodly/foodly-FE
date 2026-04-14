@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Card, Typography, Space, Flex } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import SearchForm from '@/components/common/SearchForm';
 import DataGrid from '@/components/common/DataGrid';
@@ -293,10 +292,10 @@ export default function ProductionReportPage() {
   );
 
   return (
-    <div style={{ padding: '0 0 24px' }}>
-      <Typography.Title level={4} style={{ marginBottom: 16 }}>
+    <div className="pb-6">
+      <h4 className="text-lg font-semibold text-gray-900 mb-4">
         생산일보
-      </Typography.Title>
+      </h4>
 
       {/* SearchForm */}
       <SearchForm
@@ -307,23 +306,22 @@ export default function ProductionReportPage() {
       />
 
       {/* Chart */}
-      <Card size="small" title="일별 생산량 / 달성률" style={{ marginTop: 24 }}>
+      <div className="bg-white rounded-xl p-4 shadow-sm mt-6">
+        <h5 className="text-sm font-semibold text-gray-700 mb-4">일별 생산량 / 달성률</h5>
         {dailyData.length > 0 ? (
           <ProdDailyBarChart data={dailyData} />
         ) : (
-          <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bfbfbf' }}>
+          <div className="h-[320px] flex items-center justify-center text-gray-300">
             데이터가 없습니다
           </div>
         )}
-      </Card>
+      </div>
 
       {/* DataGrid */}
-      <Card
-        size="small"
-        title="생산 집계"
-        style={{ marginTop: 24 }}
-        extra={
-          <Space>
+      <div className="bg-white rounded-xl p-4 shadow-sm mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h5 className="text-sm font-semibold text-gray-700">생산 집계</h5>
+          <div className="flex items-center gap-2">
             <ExcelDownloadButton
               filename={`생산일보_${currentStart}_${currentEnd}`}
               columns={excelColumns}
@@ -331,9 +329,8 @@ export default function ProductionReportPage() {
               label="엑셀 다운로드"
               disabled={summaryData.length === 0}
             />
-          </Space>
-        }
-      >
+          </div>
+        </div>
         <DataGrid
           columns={summaryColumns}
           dataSource={summaryData as unknown as Record<string, unknown>[]}
@@ -344,7 +341,7 @@ export default function ProductionReportPage() {
           sortBy="group_key"
           sortOrder="asc"
         />
-      </Card>
+      </div>
     </div>
   );
 }

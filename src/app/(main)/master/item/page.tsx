@@ -2,25 +2,20 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Button,
-  Space,
-  Tag,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Table,
-  message,
-  Popconfirm,
-} from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  HistoryOutlined,
-} from '@ant-design/icons';
-import type { TablePaginationConfig } from 'antd/es/table';
-import type { SorterResult } from 'antd/es/table/interface';
+  Plus,
+  Pencil,
+  Trash2,
+  History,
+} from 'lucide-react';
+import Button from '@/components/ui/Button';
+import Tag from '@/components/ui/Tag';
+import Table from '@/components/ui/Table';
+import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
+import toast from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm';
+import FormField from '@/components/ui/FormField';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
 import FormModal, { type FormModalMode } from '@/components/common/FormModal';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
@@ -181,7 +176,7 @@ export default function ItemMasterPage() {
           });
         }
       } catch (err: any) {
-        message.error(err?.response?.data?.message ?? '품목 목록 조회에 실패했습니다.');
+        toast.error(err?.response?.data?.message ?? '품목 목록 조회에 실패했습니다.');
       } finally {
         setLoading(false);
       }
@@ -210,30 +205,23 @@ export default function ItemMasterPage() {
     fetchItems(1, pagination.pageSize, sortField, sortOrder, {});
   }, [fetchItems, pagination.pageSize, sortField, sortOrder]);
 
-  /* ── Table change (pagination + sort) ─── */
-  const handleTableChange = useCallback(
-    (
-      paginationConfig: TablePaginationConfig,
-      _filters: Record<string, unknown>,
-      sorter: SorterResult<ItemRow> | SorterResult<ItemRow>[],
-    ) => {
-      const newPage = paginationConfig.current ?? 1;
-      const newPageSize = paginationConfig.pageSize ?? 20;
-
-      let newSortField: string | undefined;
-      let newSortOrder: 'asc' | 'desc' | undefined;
-
-      if (!Array.isArray(sorter) && sorter.field && sorter.order) {
-        newSortField = sorter.field as string;
-        newSortOrder = sorter.order === 'ascend' ? 'asc' : 'desc';
-      }
-
-      setSortField(newSortField);
-      setSortOrder(newSortOrder);
-      setPagination((prev) => ({ ...prev, page: newPage, pageSize: newPageSize }));
-      fetchItems(newPage, newPageSize, newSortField, newSortOrder, filters);
+  /* ── Sort change ─── */
+  const handleSortChange = useCallback(
+    (field: string, order: 'asc' | 'desc') => {
+      setSortField(field);
+      setSortOrder(order);
+      fetchItems(pagination.page, pagination.pageSize, field, order, filters);
     },
-    [fetchItems, filters],
+    [fetchItems, pagination.page, pagination.pageSize, filters],
+  );
+
+  /* ── Page change ─── */
+  const handlePageChange = useCallback(
+    (page: number, pageSize: number) => {
+      setPagination((prev) => ({ ...prev, page, pageSize }));
+      fetchItems(page, pageSize, sortField, sortOrder, filters);
+    },
+    [fetchItems, sortField, sortOrder, filters],
   );
 
   /* ── CRUD handlers ─── */
@@ -281,11 +269,11 @@ export default function ItemMasterPage() {
     async (record: ItemRow) => {
       try {
         await apiClient.delete(`/v1/items/${record.item_cd}`);
-        message.success('품목이 삭제되었습니다.');
+        toast.success('품목이 삭제되었습니다.');
         fetchItems(pagination.page, pagination.pageSize, sortField, sortOrder, filters);
       } catch (err: any) {
         const msg = err?.response?.data?.message ?? '삭제에 실패했습니다.';
-        message.error(msg);
+        toast.error(msg);
       }
     },
     [fetchItems, pagination.page, pagination.pageSize, sortField, sortOrder, filters],
@@ -319,7 +307,7 @@ export default function ItemMasterPage() {
   }, [editItem]);
 
   /* ── Table columns ─── */
-  const columns = useMemo(
+  const columns: TableColumn<ItemRow>[] = useMemo(
     () => [
       {
         title: '품목코드',
@@ -339,7 +327,7 @@ export default function ItemMasterPage() {
         title: '품목유형',
         dataIndex: 'item_type',
         width: 90,
-        align: 'center' as const,
+        align: 'center',
         sorter: true,
         render: (val: unknown) => {
           const v = val as string;
@@ -354,7 +342,7 @@ export default function ItemMasterPage() {
         title: '단위',
         dataIndex: 'unit_cd',
         width: 80,
-        align: 'center' as const,
+        align: 'center',
       },
       {
         title: '규격',
@@ -372,7 +360,7 @@ export default function ItemMasterPage() {
         title: '안전재고',
         dataIndex: 'safety_stock',
         width: 100,
-        align: 'right' as const,
+        align: 'right',
         sorter: true,
         render: (val: unknown) => {
           if (val == null) return '-';
@@ -383,7 +371,7 @@ export default function ItemMasterPage() {
         title: '사용여부',
         dataIndex: 'use_yn',
         width: 80,
-        align: 'center' as const,
+        align: 'center',
         render: (val: unknown) => (
           <Tag color={(val as string) === 'Y' ? 'green' : 'default'}>
             {(val as string) === 'Y' ? '사용' : '미사용'}
@@ -402,51 +390,63 @@ export default function ItemMasterPage() {
         title: '관리',
         dataIndex: '_action',
         width: 130,
-        align: 'center' as const,
-        fixed: 'right' as const,
+        align: 'center',
         render: (_: unknown, record: ItemRow) => (
-          <Space size={4}>
+          <div className="flex items-center gap-1">
             <PermissionButton
               action="update"
               menuUrl={MENU_URL}
               fallback="hide"
               size="small"
-              type="text"
-              icon={<EditOutlined />}
+              variant="ghost"
+              icon={<Pencil className="w-4 h-4" />}
               onClick={() => handleEdit(record)}
             >
               {''}
             </PermissionButton>
-            <Popconfirm
-              title="품목을 삭제하시겠습니까?"
-              description="다른 데이터에서 참조 중인 경우 삭제가 거부됩니다."
-              onConfirm={() => handleDelete(record)}
-              okText="삭제"
-              cancelText="취소"
+            <PermissionButton
+              action="delete"
+              menuUrl={MENU_URL}
+              fallback="hide"
+              size="small"
+              variant="ghost"
+              className="text-red-500"
+              icon={<Trash2 className="w-4 h-4" />}
+              onClick={() =>
+                confirm({
+                  title: '품목을 삭제하시겠습니까?',
+                  content: '다른 데이터에서 참조 중인 경우 삭제가 거부됩니다.',
+                  onOk: () => handleDelete(record),
+                  okText: '삭제',
+                  danger: true,
+                })
+              }
             >
-              <PermissionButton
-                action="delete"
-                menuUrl={MENU_URL}
-                fallback="hide"
-                size="small"
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              >
-                {''}
-              </PermissionButton>
-            </Popconfirm>
+              {''}
+            </PermissionButton>
             <Button
               size="small"
-              type="text"
-              icon={<HistoryOutlined />}
+              variant="ghost"
+              icon={<History className="w-4 h-4" />}
               onClick={() => handleHistory(record)}
             />
-          </Space>
+          </div>
         ),
       },
     ],
     [handleEdit, handleDelete, handleHistory],
+  );
+
+  /* ── Pagination config ─── */
+  const paginationConfig: PaginationConfig = useMemo(
+    () => ({
+      current: pagination.page,
+      pageSize: pagination.pageSize,
+      total: pagination.total,
+      onChange: handlePageChange,
+      pageSizeOptions: [10, 20, 50, 100],
+    }),
+    [pagination, handlePageChange],
   );
 
   /* ── Render ─── */
@@ -459,7 +459,7 @@ export default function ItemMasterPage() {
         onReset={handleSearchReset}
         loading={loading}
         extraButtons={
-          <Space>
+          <div className="flex items-center gap-2">
             <ExcelUploadButton
               uploadUrl="/v1/items/import"
               onComplete={() =>
@@ -471,20 +471,20 @@ export default function ItemMasterPage() {
               columns={EXCEL_COLUMNS}
               data={fetchExcelData}
             />
-          </Space>
+          </div>
         }
       />
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ color: '#666', fontSize: 13 }}>
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-gray-500 text-sm">
           총 <strong>{pagination.total.toLocaleString()}</strong>건
         </span>
         <PermissionButton
           action="create"
           menuUrl={MENU_URL}
-          type="primary"
-          icon={<PlusOutlined />}
+          variant="primary"
+          icon={<Plus className="w-4 h-4" />}
           onClick={handleCreate}
         >
           품목 등록
@@ -497,18 +497,11 @@ export default function ItemMasterPage() {
         dataSource={items}
         rowKey="item_cd"
         loading={loading}
-        size="small"
-        scroll={{ x: 1200 }}
-        pagination={{
-          current: pagination.page,
-          pageSize: pagination.pageSize,
-          total: pagination.total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
-          showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}건`,
-        }}
-        onChange={handleTableChange as any}
+        pagination={paginationConfig}
+        sortBy={sortField}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        scrollX={1200}
       />
 
       {/* Create/Edit Modal */}
@@ -526,71 +519,82 @@ export default function ItemMasterPage() {
       >
         {(form, mode) => (
           <>
-            <Form.Item
-              name="item_cd"
-              label="품목코드"
-              rules={[
-                { required: true, message: '품목코드를 입력하세요.' },
-                { max: 30, message: '최대 30자까지 입력 가능합니다.' },
-              ]}
-            >
+            <FormField label="품목코드" required>
               <Input
+                name="item_cd"
                 placeholder="품목코드 입력"
                 disabled={mode === 'edit'}
                 maxLength={30}
+                required
+                defaultValue={form.getFieldsValue().item_cd ?? ''}
+                onChange={(e) => form.setFieldsValue({ item_cd: e.target.value } as Partial<ItemFormValues>)}
               />
-            </Form.Item>
-            <Form.Item
-              name="item_nm"
-              label="품목명"
-              rules={[
-                { required: true, message: '품목명을 입력하세요.' },
-                { max: 200, message: '최대 200자까지 입력 가능합니다.' },
-              ]}
-            >
-              <Input placeholder="품목명 입력" maxLength={200} />
-            </Form.Item>
-            <Form.Item
-              name="item_type"
-              label="품목유형"
-              rules={[{ required: true, message: '품목유형을 선택하세요.' }]}
-            >
+            </FormField>
+            <FormField label="품목명" required>
+              <Input
+                name="item_nm"
+                placeholder="품목명 입력"
+                maxLength={200}
+                required
+                defaultValue={form.getFieldsValue().item_nm ?? ''}
+                onChange={(e) => form.setFieldsValue({ item_nm: e.target.value } as Partial<ItemFormValues>)}
+              />
+            </FormField>
+            <FormField label="품목유형" required>
               <Select
+                name="item_type"
                 placeholder="품목유형 선택"
                 options={ITEM_TYPE_OPTIONS}
+                required
+                defaultValue={form.getFieldsValue().item_type ?? ''}
+                onChange={(e) => form.setFieldsValue({ item_type: e.target.value } as Partial<ItemFormValues>)}
               />
-            </Form.Item>
-            <Form.Item name="unit_cd" label="단위">
-              <CommonCodeSelect groupCd="UNIT" placeholder="단위 선택" />
-            </Form.Item>
-            <Form.Item name="spec" label="규격">
-              <Input placeholder="규격 입력" />
-            </Form.Item>
-            <Form.Item name="drawing_no" label="도면번호">
-              <Input placeholder="도면번호 입력" />
-            </Form.Item>
-            <Form.Item
-              name="safety_stock"
-              label="안전재고"
-              rules={[
-                {
-                  type: 'number',
-                  min: 0,
-                  message: '0 이상의 값을 입력하세요.',
-                },
-              ]}
-            >
-              <InputNumber
+            </FormField>
+            <FormField label="단위">
+              <CommonCodeSelect
+                groupCd="UNIT"
+                placeholder="단위 선택"
+                value={form.getFieldsValue().unit_cd}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => form.setFieldsValue({ unit_cd: e.target.value } as Partial<ItemFormValues>)}
+              />
+            </FormField>
+            <FormField label="규격">
+              <Input
+                name="spec"
+                placeholder="규격 입력"
+                defaultValue={form.getFieldsValue().spec ?? ''}
+                onChange={(e) => form.setFieldsValue({ spec: e.target.value } as Partial<ItemFormValues>)}
+              />
+            </FormField>
+            <FormField label="도면번호">
+              <Input
+                name="drawing_no"
+                placeholder="도면번호 입력"
+                defaultValue={form.getFieldsValue().drawing_no ?? ''}
+                onChange={(e) => form.setFieldsValue({ drawing_no: e.target.value } as Partial<ItemFormValues>)}
+              />
+            </FormField>
+            <FormField label="안전재고">
+              <input
+                type="number"
+                name="safety_stock"
                 placeholder="안전재고"
                 min={0}
-                style={{ width: '100%' }}
-                precision={0}
+                step={1}
+                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                defaultValue={form.getFieldsValue().safety_stock ?? ''}
+                onChange={(e) => form.setFieldsValue({ safety_stock: e.target.value ? Number(e.target.value) : undefined } as Partial<ItemFormValues>)}
               />
-            </Form.Item>
+            </FormField>
             {mode === 'edit' && (
-              <Form.Item name="use_yn" label="사용여부">
-                <Select options={USE_YN_OPTIONS} />
-              </Form.Item>
+              <FormField label="사용여부">
+                <Select
+                  name="use_yn"
+                  options={USE_YN_OPTIONS}
+                  defaultValue={form.getFieldsValue().use_yn ?? 'Y'}
+                  onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<ItemFormValues>)}
+                />
+              </FormField>
             )}
           </>
         )}

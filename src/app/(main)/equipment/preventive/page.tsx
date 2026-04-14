@@ -1,20 +1,15 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  Badge,
-  Button,
-  Drawer,
-  List,
-  Modal,
-  Space,
-  Tag,
-  Typography,
-  message,
-} from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Plus } from 'lucide-react';
 import dayjs from 'dayjs';
+import Alert from '@/components/ui/Alert';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import Drawer from '@/components/ui/Drawer';
+import Tag from '@/components/ui/Tag';
+import toast from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm';
 import DataGrid, { type DataGridColumn } from '@/components/common/DataGrid';
 import MaintenanceCalendar, {
   type MaintPlanCalendarItem,
@@ -84,7 +79,7 @@ function buildColumns(
       render: (val: unknown) => {
         const code = val as string | undefined;
         if (!code) return '-';
-        return <Tag color={MAINT_TYPE_COLORS[code] ?? 'default'}>{code}</Tag>;
+        return <Tag color={MAINT_TYPE_COLORS[code] ?? 'gray'}>{code}</Tag>;
       },
     },
     {
@@ -143,7 +138,7 @@ function buildColumns(
         return (
           <Button
             size="small"
-            type="primary"
+            variant="primary"
             disabled={!isDue}
             onClick={(e) => {
               e.stopPropagation();
@@ -271,7 +266,6 @@ export default function PreventivePage() {
 
   /* ── Today alert click → filter grid ─────────── */
   const handleAlertClick = useCallback(() => {
-    // Refresh plan list filtered to today
     setLoading(true);
     apiClient
       .get('/v1/maint-plans', {
@@ -303,22 +297,21 @@ export default function PreventivePage() {
   /* ── Plan delete ──────────────────────────────── */
   const handleDeletePlan = useCallback(
     (plan: MaintPlan) => {
-      Modal.confirm({
+      confirm({
         title: '보전계획 삭제',
-        content:
-          '이 보전계획을 삭제하면 관련 점검항목도 함께 삭제됩니다. 계속하시겠습니까?',
-        okType: 'danger',
+        content: '이 보전계획을 삭제하면 관련 점검항목도 함께 삭제됩니다. 계속하시겠습니까?',
+        danger: true,
         onOk: async () => {
           try {
             await apiClient.delete(`/v1/maint-plans/${plan.maint_plan_id}`);
-            message.success('보전계획이 삭제되었습니다.');
+            toast.success('보전계획이 삭제되었습니다.');
             fetchPlans(1, pageSize);
             fetchCalendarPlans(calendarRange.start, calendarRange.end);
             fetchTodayCount();
             setPage(1);
           } catch (err: unknown) {
             const axiosErr = err as { response?: { data?: { message?: string } } };
-            message.error(
+            toast.error(
               axiosErr?.response?.data?.message ?? '삭제에 실패했습니다.',
             );
           }
@@ -393,29 +386,29 @@ export default function PreventivePage() {
   }, []);
 
   return (
-    <div style={{ padding: '16px 24px' }}>
-      {/* Today due alert — per D-08: page-local alert at top of page */}
+    <div className="px-6 py-4">
+      {/* Today due alert */}
       {todayDueCount > 0 && (
-        <Alert
-          type="warning"
-          showIcon
-          banner
-          message={
-            <span
-              style={{ cursor: 'pointer' }}
-              onClick={handleAlertClick}
-            >
-              오늘 점검 예정: {todayDueCount}건
-            </span>
-          }
-          style={{ marginBottom: 16 }}
-        />
+        <div className="mb-4">
+          <Alert
+            type="warning"
+            showIcon
+            message={
+              <span
+                className="cursor-pointer"
+                onClick={handleAlertClick}
+              >
+                오늘 점검 예정: {todayDueCount}건
+              </span>
+            }
+          />
+        </div>
       )}
 
       {/* Two-panel split layout */}
-      <div style={{ display: 'flex', gap: 16 }}>
+      <div className="flex gap-4">
         {/* Left panel: Calendar (60%) */}
-        <div style={{ flex: '0 0 60%', minWidth: 0 }}>
+        <div className="w-[60%] min-w-0">
           <MaintenanceCalendar
             plans={calendarPlans}
             onDateSelect={handleDateSelect}
@@ -425,12 +418,12 @@ export default function PreventivePage() {
         </div>
 
         {/* Right panel: Plan list (40%) */}
-        <div style={{ flex: '0 0 40%', minWidth: 0 }}>
+        <div className="w-[40%] min-w-0">
           {/* Toolbar */}
-          <div style={{ marginBottom: 12 }}>
+          <div className="mb-3">
             <Button
-              type="primary"
-              icon={<PlusOutlined />}
+              variant="primary"
+              icon={<Plus className="w-4 h-4" />}
               onClick={handleCreatePlan}
             >
               보전계획 등록
@@ -464,26 +457,32 @@ export default function PreventivePage() {
         placement="right"
         width={480}
         onClose={() => setDrawerOpen(false)}
-        destroyOnClose
       >
         {selectedDatePlans.length === 0 ? (
-          <Typography.Text type="secondary">
+          <p className="text-gray-400">
             이 날짜에 예정된 보전계획이 없습니다.
-          </Typography.Text>
+          </p>
         ) : (
-          <List
-            itemLayout="horizontal"
-            dataSource={selectedDatePlans}
-            renderItem={(item) => {
+          <div className="space-y-3">
+            {selectedDatePlans.map((item) => {
               const isDue = item.next_plan_date <= today;
               return (
-                <List.Item
-                  actions={[
-                    isDue && (
+                <div key={item.maint_plan_id} className="border-b border-gray-100 pb-3">
+                  <div className="font-medium">{item.plan_nm}</div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                    <span>{item.equipment?.equip_nm ?? '-'}</span>
+                    {item.maint_type_cd && (
+                      <Tag color="blue">{item.maint_type_cd}</Tag>
+                    )}
+                    {item.assignee?.worker_nm && (
+                      <span>{item.assignee.worker_nm}</span>
+                    )}
+                  </div>
+                  {isDue && (
+                    <div className="mt-2">
                       <Button
                         size="small"
-                        type="primary"
-                        key="register"
+                        variant="primary"
                         onClick={() => {
                           setDrawerOpen(false);
                           handleResultClick(item as unknown as MaintPlan);
@@ -491,27 +490,12 @@ export default function PreventivePage() {
                       >
                         보전이력 등록
                       </Button>
-                    ),
-                  ].filter(Boolean)}
-                >
-                  <List.Item.Meta
-                    title={item.plan_nm}
-                    description={
-                      <Space>
-                        <span>{item.equipment?.equip_nm ?? '-'}</span>
-                        {item.maint_type_cd && (
-                          <Tag color="blue">{item.maint_type_cd}</Tag>
-                        )}
-                        {item.assignee?.worker_nm && (
-                          <span>{item.assignee.worker_nm}</span>
-                        )}
-                      </Space>
-                    }
-                  />
-                </List.Item>
+                    </div>
+                  )}
+                </div>
               );
-            }}
-          />
+            })}
+          </div>
         )}
       </Drawer>
 

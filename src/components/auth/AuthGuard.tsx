@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Spin, Result } from 'antd';
+import { Spinner } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { usePermissionStore } from '@/stores/permissionStore';
+import { AlertCircle } from 'lucide-react';
 
 const PUBLIC_PATHS = ['/login'];
 /** 인증만 필요하고 별도 메뉴 권한 검사 불필요한 경로 */
@@ -50,8 +51,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   // hydrate 완료 전 로딩
   if (!checked) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <Spin size="large" tip="로딩 중..." />
+      <div className="flex justify-center items-center min-h-screen">
+        <Spinner size="large" tip="로딩 중..." />
       </div>
     );
   }
@@ -64,8 +65,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   // 권한 로딩 중
   if (!permLoaded) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <Spin size="large" tip="권한 확인 중..." />
+      <div className="flex justify-center items-center min-h-screen">
+        <Spinner size="large" tip="권한 확인 중..." />
       </div>
     );
   }
@@ -89,28 +90,22 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     if (!parentAccess) {
       return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-          <Result
-            status="403"
-            title="접근 권한 없음"
-            subTitle="해당 페이지에 대한 접근 권한이 없습니다. 관리자에게 문의하세요."
-            extra={
-              <button
-                onClick={() => router.push('/dashboard')}
-                style={{
-                  padding: '8px 24px',
-                  background: '#1677ff',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
-              >
-                대시보드로 이동
-              </button>
-            }
-          />
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="text-center max-w-md px-6">
+            <div className="flex justify-center mb-6">
+              <AlertCircle className="w-16 h-16 text-red-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">접근 권한 없음</h1>
+            <p className="text-gray-500 mb-8">
+              해당 페이지에 대한 접근 권한이 없습니다. 관리자에게 문의하세요.
+            </p>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors text-sm font-medium"
+            >
+              대시보드로 이동
+            </button>
+          </div>
         </div>
       );
     }

@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Space, Tag, message } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
-import type { TablePaginationConfig } from 'antd/es/table';
-import type { SorterResult } from 'antd/es/table/interface';
+import { Plus } from 'lucide-react';
+import { Button, Tag } from '@/components/ui';
+import toast from '@/components/ui/toast';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
 import DataGrid, { type DataGridColumn } from '@/components/common/DataGrid';
 import ExcelDownloadButton from '@/components/common/ExcelDownloadButton';
@@ -142,7 +141,7 @@ export default function DefectPage() {
           });
         }
       } catch (err: any) {
-        message.error(err?.response?.data?.message ?? '데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+        toast.error(err?.response?.data?.message ?? '데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
       } finally {
         setLoading(false);
       }
@@ -334,19 +333,12 @@ export default function DefectPage() {
       />
 
       {/* Toolbar */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 12,
-        }}
-      >
-        <span style={{ color: '#666', fontSize: 13 }}>
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-gray-500 text-[13px]">
           총 <strong>{pagination.total.toLocaleString()}</strong>건
         </span>
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateClick}>
+        <div className="flex items-center gap-2">
+          <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={handleCreateClick}>
             불량 등록
           </Button>
           <ExcelDownloadButton
@@ -354,7 +346,7 @@ export default function DefectPage() {
             columns={EXCEL_COLUMNS}
             data={getExcelData}
           />
-        </Space>
+        </div>
       </div>
 
       {/* Data Grid */}

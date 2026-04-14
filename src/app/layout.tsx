@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import AntdProvider from '@/components/providers/AntdProvider';
 import AuthGuard from '@/components/auth/AuthGuard';
 import SessionWarningModal from '@/components/auth/SessionWarningModal';
 
@@ -17,12 +16,10 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        <AntdProvider>
-          <AuthGuard>
-            {children}
-          </AuthGuard>
-          <SessionWarningModal />
-        </AntdProvider>
+        <AuthGuard>
+          {children}
+        </AuthGuard>
+        <SessionWarningModal />
       </body>
     </html>
   );

@@ -1,19 +1,15 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Button,
-  DatePicker,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Space,
-  message,
-} from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Trash2, Plus } from 'lucide-react';
 import dayjs from 'dayjs';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import FormField from '@/components/ui/FormField';
+import toast from '@/components/ui/toast';
 import CommonCodeSelect from '@/components/common/CommonCodeSelect';
 import apiClient from '@/lib/apiClient';
 
@@ -37,6 +33,12 @@ interface WorkerOption {
   worker_nm: string;
 }
 
+interface ChecklistItem {
+  plan_dtl_id?: number;
+  check_item: string;
+  check_std: string;
+}
+
 /* ── Component ────────────────────────────────────── */
 
 export default function MaintPlanFormModal({
@@ -46,11 +48,14 @@ export default function MaintPlanFormModal({
   onOk,
   onCancel,
 }: MaintPlanFormModalProps) {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [equipments, setEquipments] = useState<EquipmentOption[]>([]);
   const [workers, setWorkers] = useState<WorkerOption[]>([]);
   const isView = mode === 'view';
+
+  /* Form state */
+  const [formValues, setFormValues] = useState<Record<string, unknown>>({});
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
 
   /* ── Fetch reference data ─────────────────────── */
   useEffect(() => {
@@ -79,26 +84,29 @@ export default function MaintPlanFormModal({
 
     if (plan && (mode === 'edit' || mode === 'view')) {
       const planDtls = (plan.plan_dtls as Array<Record<string, unknown>>) ?? [];
-      form.setFieldsValue({
+      setFormValues({
         equip_cd: plan.equip_cd,
         plan_nm: plan.plan_nm,
         maint_type_cd: plan.maint_type_cd,
         cycle_type: plan.cycle_type,
         next_plan_date: plan.next_plan_date
-          ? dayjs(plan.next_plan_date as string)
-          : undefined,
+          ? String(plan.next_plan_date).slice(0, 10)
+          : '',
         assignee_id: plan.assignee_id,
         description: plan.description,
-        checklist_items: planDtls.map((dtl) => ({
-          plan_dtl_id: dtl.plan_dtl_id,
-          check_item: dtl.check_item,
-          check_std: dtl.check_std ?? '',
-        })),
       });
+      setChecklistItems(
+        planDtls.map((dtl) => ({
+          plan_dtl_id: dtl.plan_dtl_id as number | undefined,
+          check_item: (dtl.check_item as string) ?? '',
+          check_std: (dtl.check_std as string) ?? '',
+        })),
+      );
     } else {
-      form.resetFields();
+      setFormValues({});
+      setChecklistItems([]);
     }
-  }, [open, plan, mode, form]);
+  }, [open, plan, mode]);
 
   /* ── Submit ───────────────────────────────────── */
   const handleOk = useCallback(async () => {
@@ -107,29 +115,39 @@ export default function MaintPlanFormModal({
       return;
     }
 
+    if (!formValues.equip_cd) {
+      toast.warning('설비를 선택해주세요.');
+      return;
+    }
+    if (!formValues.plan_nm) {
+      toast.warning('보전계획명을 입력해주세요.');
+      return;
+    }
+    if (!formValues.next_plan_date) {
+      toast.warning('점검일을 선택해주세요.');
+      return;
+    }
+
     try {
-      const values = await form.validateFields();
       setLoading(true);
 
-      const checklistItems = (
-        (values.checklist_items as Array<{ check_item: string; check_std?: string }>) ?? []
-      ).map((item, idx) => ({
-        item_no: idx + 1,
-        check_item: item.check_item,
-        check_std: item.check_std ?? '',
-      }));
+      const items = checklistItems
+        .filter((item) => item.check_item.trim())
+        .map((item, idx) => ({
+          item_no: idx + 1,
+          check_item: item.check_item,
+          check_std: item.check_std ?? '',
+        }));
 
       const body = {
-        equip_cd: values.equip_cd,
-        plan_nm: values.plan_nm,
-        maint_type_cd: values.maint_type_cd,
-        cycle_type: values.cycle_type,
-        next_plan_date: values.next_plan_date
-          ? (values.next_plan_date as dayjs.Dayjs).format('YYYY-MM-DD')
-          : undefined,
-        assignee_id: values.assignee_id,
-        description: values.description,
-        checklist_items: checklistItems,
+        equip_cd: formValues.equip_cd,
+        plan_nm: formValues.plan_nm,
+        maint_type_cd: formValues.maint_type_cd,
+        cycle_type: formValues.cycle_type,
+        next_plan_date: formValues.next_plan_date,
+        assignee_id: formValues.assignee_id,
+        description: formValues.description,
+        checklist_items: items,
       };
 
       if (mode === 'create') {
@@ -139,23 +157,25 @@ export default function MaintPlanFormModal({
         await apiClient.put(`/v1/maint-plans/${planId}`, body);
       }
 
-      message.success('보전계획이 저장되었습니다.');
-      form.resetFields();
+      toast.success('보전계획이 저장되었습니다.');
+      setFormValues({});
+      setChecklistItems([]);
       onOk();
     } catch (err: unknown) {
       const axiosErr = err as { errorFields?: unknown; response?: { data?: { message?: string } } };
-      if (axiosErr?.errorFields) return; // validation error
-      message.error(axiosErr?.response?.data?.message ?? '저장 중 오류가 발생했습니다.');
+      if (axiosErr?.errorFields) return;
+      toast.error(axiosErr?.response?.data?.message ?? '저장 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
-  }, [form, isView, mode, plan, onOk, onCancel]);
+  }, [formValues, isView, mode, plan, checklistItems, onOk, onCancel]);
 
   /* ── Cancel ───────────────────────────────────── */
   const handleCancel = useCallback(() => {
-    form.resetFields();
+    setFormValues({});
+    setChecklistItems([]);
     onCancel();
-  }, [form, onCancel]);
+  }, [onCancel]);
 
   /* ── Modal title ──────────────────────────────── */
   const title =
@@ -169,12 +189,12 @@ export default function MaintPlanFormModal({
   const footer = isView ? (
     <Button onClick={handleCancel}>닫기</Button>
   ) : (
-    <Space>
+    <div className="flex items-center gap-2">
       <Button onClick={handleCancel}>취소</Button>
-      <Button type="primary" loading={loading} onClick={handleOk}>
+      <Button variant="primary" loading={loading} onClick={handleOk}>
         {mode === 'create' ? '등록' : '저장'}
       </Button>
-    </Space>
+    </div>
   );
 
   return (
@@ -182,56 +202,51 @@ export default function MaintPlanFormModal({
       open={open}
       title={title}
       width={720}
-      destroyOnClose
       maskClosable={false}
+      onClose={handleCancel}
       footer={footer}
-      onCancel={handleCancel}
     >
-      <Form
-        form={form}
-        layout="horizontal"
-        labelCol={{ span: 6 }}
-        wrapperCol={{ span: 18 }}
-        disabled={isView}
-        autoComplete="off"
-      >
+      <fieldset disabled={isView} className="space-y-4">
         {/* Equipment */}
-        <Form.Item
-          name="equip_cd"
-          label="설비"
-          rules={[{ required: true, message: '설비를 선택해주세요.' }]}
-        >
+        <FormField label="설비" required layout="horizontal">
           <Select
-            showSearch
             placeholder="설비 선택"
-            optionFilterProp="label"
-            allowClear
+            value={(formValues.equip_cd as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, equip_cd: e.target.value }))}
             options={equipments.map((e) => ({
               label: e.equip_nm,
               value: e.equip_cd,
             }))}
           />
-        </Form.Item>
+        </FormField>
 
         {/* Plan name */}
-        <Form.Item
-          name="plan_nm"
-          label="보전계획명"
-          rules={[{ required: true, message: '보전계획명을 입력해주세요.' }]}
-        >
-          <Input placeholder="보전계획명" />
-        </Form.Item>
+        <FormField label="보전계획명" required layout="horizontal">
+          <Input
+            placeholder="보전계획명"
+            required
+            value={(formValues.plan_nm as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, plan_nm: e.target.value }))}
+          />
+        </FormField>
 
         {/* Maintenance type */}
-        <Form.Item name="maint_type_cd" label="보전유형">
-          <CommonCodeSelect groupCd="MAINT_TYPE" placeholder="보전유형 선택" allowClear />
-        </Form.Item>
+        <FormField label="보전유형" layout="horizontal">
+          <CommonCodeSelect
+            groupCd="MAINT_TYPE"
+            placeholder="보전유형 선택"
+            showAll
+            value={(formValues.maint_type_cd as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, maint_type_cd: e.target.value }))}
+          />
+        </FormField>
 
         {/* Cycle type */}
-        <Form.Item name="cycle_type" label="점검주기">
+        <FormField label="점검주기" layout="horizontal">
           <Select
             placeholder="주기 선택"
-            allowClear
+            value={(formValues.cycle_type as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, cycle_type: e.target.value }))}
             options={[
               { label: '매일', value: 'DAILY' },
               { label: '매주', value: 'WEEKLY' },
@@ -239,91 +254,92 @@ export default function MaintPlanFormModal({
               { label: '매년', value: 'YEARLY' },
             ]}
           />
-        </Form.Item>
+        </FormField>
 
         {/* Next plan date */}
-        <Form.Item
-          name="next_plan_date"
-          label="점검일"
-          rules={[{ required: true, message: '점검일을 선택해주세요.' }]}
-        >
-          <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
-        </Form.Item>
+        <FormField label="점검일" required layout="horizontal">
+          <input
+            type="date"
+            className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+            required
+            value={(formValues.next_plan_date as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, next_plan_date: e.target.value }))}
+          />
+        </FormField>
 
         {/* Assignee */}
-        <Form.Item name="assignee_id" label="담당자">
+        <FormField label="담당자" layout="horizontal">
           <Select
-            showSearch
             placeholder="담당자 선택"
-            optionFilterProp="label"
-            allowClear
+            value={(formValues.assignee_id as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, assignee_id: e.target.value ? Number(e.target.value) : undefined }))}
             options={workers.map((w) => ({
               label: w.worker_nm,
               value: w.worker_id,
             }))}
           />
-        </Form.Item>
+        </FormField>
 
         {/* Description */}
-        <Form.Item name="description" label="설명">
-          <Input.TextArea rows={2} placeholder="보전 설명" />
-        </Form.Item>
+        <FormField label="설명" layout="horizontal">
+          <Textarea
+            rows={2}
+            placeholder="보전 설명"
+            value={(formValues.description as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, description: e.target.value }))}
+          />
+        </FormField>
 
-        {/* Dynamic checklist items — per D-10 */}
-        <Form.Item label="점검항목" style={{ marginBottom: 0 }}>
-          <Form.List name="checklist_items">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map((field, index) => (
-                  <Space
-                    key={field.key}
-                    align="baseline"
-                    style={{ display: 'flex', marginBottom: 8 }}
-                  >
-                    <span style={{ minWidth: 24, color: '#8c8c8c' }}>
-                      {index + 1}.
-                    </span>
-                    <Form.Item
-                      {...field}
-                      name={[field.name, 'check_item']}
-                      rules={[{ required: true, message: '항목명 필수' }]}
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Input placeholder="점검항목명" style={{ width: 200 }} />
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      name={[field.name, 'check_std']}
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Input placeholder="점검기준 (선택)" style={{ width: 200 }} />
-                    </Form.Item>
-                    {!isView && (
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => remove(field.name)}
-                        size="small"
-                      />
-                    )}
-                  </Space>
-                ))}
+        {/* Dynamic checklist items */}
+        <FormField label="점검항목" layout="horizontal">
+          <div className="space-y-2">
+            {checklistItems.map((item, index) => (
+              <div key={index} className="flex items-baseline gap-2">
+                <span className="text-xs text-gray-400 min-w-[24px]">{index + 1}.</span>
+                <Input
+                  placeholder="점검항목명"
+                  required
+                  className="w-[200px]"
+                  value={item.check_item}
+                  onChange={(e) => {
+                    setChecklistItems((prev) =>
+                      prev.map((ci, i) => (i === index ? { ...ci, check_item: e.target.value } : ci)),
+                    );
+                  }}
+                />
+                <Input
+                  placeholder="점검기준 (선택)"
+                  className="w-[200px]"
+                  value={item.check_std}
+                  onChange={(e) => {
+                    setChecklistItems((prev) =>
+                      prev.map((ci, i) => (i === index ? { ...ci, check_std: e.target.value } : ci)),
+                    );
+                  }}
+                />
                 {!isView && (
                   <Button
-                    type="dashed"
-                    onClick={() => add()}
-                    icon={<PlusOutlined />}
+                    variant="danger"
                     size="small"
-                  >
-                    항목 추가
-                  </Button>
+                    icon={<Trash2 className="w-4 h-4" />}
+                    onClick={() => setChecklistItems((prev) => prev.filter((_, i) => i !== index))}
+                  />
                 )}
-              </>
+              </div>
+            ))}
+            {!isView && (
+              <Button
+                variant="ghost"
+                onClick={() => setChecklistItems((prev) => [...prev, { check_item: '', check_std: '' }])}
+                icon={<Plus className="w-4 h-4" />}
+                size="small"
+              >
+                항목 추가
+              </Button>
             )}
-          </Form.List>
-        </Form.Item>
-      </Form>
+          </div>
+        </FormField>
+      </fieldset>
     </Modal>
   );
 }

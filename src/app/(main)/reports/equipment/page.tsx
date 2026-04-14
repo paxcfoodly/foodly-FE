@@ -1,27 +1,17 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import {
-  Card,
-  DatePicker,
-  Button,
-  Space,
-  Typography,
-  Flex,
-  Empty,
-  Table,
-  Spin,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Search, RotateCcw } from 'lucide-react';
 import dayjs, { type Dayjs } from 'dayjs';
+import Button from '@/components/ui/Button';
+import Spinner from '@/components/ui/Spinner';
+import Empty from '@/components/ui/Empty';
+import Table, { type TableColumn } from '@/components/ui/Table';
 import OeeGaugeChart from '@/components/equipment/OeeGaugeChart';
 import AvailabilityBarChart from '@/components/equipment/AvailabilityBarChart';
 import OeeTrendChart from '@/components/equipment/OeeTrendChart';
 import ExcelDownloadButton from '@/components/common/ExcelDownloadButton';
 import apiClient from '@/lib/apiClient';
-
-const { RangePicker } = DatePicker;
 
 // ─── Types ───
 
@@ -54,77 +44,70 @@ function average(arr: number[]): number {
 
 // ─── Columns ───
 
-const oeeColumns: ColumnsType<OeeResult & { run_hours: number; down_hours: number }> = [
-  { title: '설비코드', dataIndex: 'equip_cd', key: 'equip_cd', width: 120, ellipsis: true },
-  { title: '설비명', dataIndex: 'equip_nm', key: 'equip_nm', width: 150, ellipsis: true },
+type GridRow = OeeResult & { run_hours: number; down_hours: number; [key: string]: unknown };
+
+const oeeColumns: TableColumn<GridRow>[] = [
+  { title: '설비코드', dataIndex: 'equip_cd', width: 120, ellipsis: true },
+  { title: '설비명', dataIndex: 'equip_nm', width: 150, ellipsis: true },
   {
     title: '가동률(%)',
     dataIndex: 'availability',
-    key: 'availability',
     width: 100,
     align: 'right',
-    render: (v: number) => v.toFixed(1),
-    sorter: (a, b) => a.availability - b.availability,
+    sorter: true,
+    render: (v: unknown) => Number(v).toFixed(1),
   },
   {
     title: '성능률(%)',
     dataIndex: 'performance',
-    key: 'performance',
     width: 100,
     align: 'right',
-    render: (v: number) => v.toFixed(1),
-    sorter: (a, b) => a.performance - b.performance,
+    sorter: true,
+    render: (v: unknown) => Number(v).toFixed(1),
   },
   {
     title: '양품률(%)',
     dataIndex: 'quality',
-    key: 'quality',
     width: 100,
     align: 'right',
-    render: (v: number) => v.toFixed(1),
-    sorter: (a, b) => a.quality - b.quality,
+    sorter: true,
+    render: (v: unknown) => Number(v).toFixed(1),
   },
   {
     title: 'OEE(%)',
     dataIndex: 'oee',
-    key: 'oee',
     width: 100,
     align: 'right',
-    render: (v: number) => v.toFixed(1),
-    sorter: (a, b) => a.oee - b.oee,
-    defaultSortOrder: 'ascend',
+    sorter: true,
+    render: (v: unknown) => Number(v).toFixed(1),
   },
   {
     title: '가동시간(h)',
     dataIndex: 'run_hours',
-    key: 'run_hours',
     width: 120,
     align: 'right',
-    render: (v: number) => v.toFixed(1),
+    render: (v: unknown) => Number(v).toFixed(1),
   },
   {
     title: '비가동시간(h)',
     dataIndex: 'down_hours',
-    key: 'down_hours',
     width: 130,
     align: 'right',
-    render: (v: number) => v.toFixed(1),
+    render: (v: unknown) => Number(v).toFixed(1),
   },
   {
     title: '생산수량',
     dataIndex: 'good_qty',
-    key: 'good_qty',
     width: 100,
     align: 'right',
-    sorter: (a, b) => a.good_qty - b.good_qty,
+    sorter: true,
   },
   {
     title: '불량수량',
     dataIndex: 'defect_qty',
-    key: 'defect_qty',
     width: 100,
     align: 'right',
-    sorter: (a, b) => a.defect_qty - b.defect_qty,
+    sorter: true,
   },
 ];
 
@@ -147,13 +130,14 @@ export default function OeeReportPage() {
   const defaultEnd = dayjs();
   const defaultStart = defaultEnd.subtract(30, 'day');
 
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([defaultStart, defaultEnd]);
+  const [startDate, setStartDate] = useState(defaultStart.format('YYYY-MM-DD'));
+  const [endDate, setEndDate] = useState(defaultEnd.format('YYYY-MM-DD'));
   const [summaryData, setSummaryData] = useState<OeeResult[]>([]);
   const [trendData, setTrendData] = useState<OeeTrendPoint[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const startDate = dateRange[0].format('YYYY-MM-DD');
-  const endDate = dateRange[1].format('YYYY-MM-DD');
+  const [tablePage, setTablePage] = useState(1);
+  const pageSize = 20;
 
   const fetchAll = useCallback(async (start: string, end: string) => {
     setLoading(true);
@@ -184,7 +168,8 @@ export default function OeeReportPage() {
   const handleReset = () => {
     const end = dayjs();
     const start = end.subtract(30, 'day');
-    setDateRange([start, end]);
+    setStartDate(start.format('YYYY-MM-DD'));
+    setEndDate(end.format('YYYY-MM-DD'));
     fetchAll(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
   };
 
@@ -200,113 +185,127 @@ export default function OeeReportPage() {
   }));
 
   // DataGrid rows with computed run_hours / down_hours
-  type GridRow = OeeResult & { run_hours: number; down_hours: number };
   const gridRows: GridRow[] = summaryData.map((d) => ({
     ...d,
     run_hours: Math.round((d.total_run_min / 60) * 10) / 10,
     down_hours: Math.round((d.total_down_min / 60) * 10) / 10,
   }));
 
+  const paginatedRows = gridRows.slice((tablePage - 1) * pageSize, tablePage * pageSize);
+
   return (
-    <div style={{ padding: '0 0 24px' }}>
-      <Typography.Title level={4} style={{ marginBottom: 16 }}>
+    <div className="pb-6">
+      <h4 className="text-lg font-semibold text-gray-900 mb-4">
         OEE 리포트
-      </Typography.Title>
+      </h4>
 
       {/* Search Form */}
-      <Card size="small" style={{ marginBottom: 0 }}>
-        <Space wrap>
-          <span>조회 기간:</span>
-          <RangePicker
-            value={dateRange}
-            onChange={(vals) => {
-              if (vals && vals[0] && vals[1]) {
-                setDateRange([vals[0], vals[1]]);
-              }
-            }}
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm text-gray-600">조회 기간:</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="h-9 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15"
           />
-          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} loading={loading}>
+          <span className="text-gray-400">~</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="h-9 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15"
+          />
+          <Button variant="primary" icon={<Search className="w-4 h-4" />} onClick={handleSearch} loading={loading}>
             조회
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={handleReset}>
+          <Button icon={<RotateCcw className="w-4 h-4" />} onClick={handleReset}>
             초기화
           </Button>
-        </Space>
-      </Card>
+        </div>
+      </div>
 
       {/* OEE Gauge Cards */}
-      <Card size="small" title="OEE 현황" style={{ marginTop: 24 }}>
+      <div className="bg-white rounded-xl p-4 shadow-sm mt-6">
+        <h5 className="text-sm font-semibold text-gray-700 mb-4">OEE 현황</h5>
         {loading ? (
-          <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Spin tip="데이터를 집계하는 중입니다..." />
+          <div className="h-[200px] flex items-center justify-center">
+            <Spinner tip="데이터를 집계하는 중입니다..." />
           </div>
         ) : summaryData.length === 0 ? (
-          <Empty description="데이터가 없습니다" style={{ padding: '24px 0' }} />
+          <Empty description="데이터가 없습니다" />
         ) : (
-          <Flex justify="space-around" align="center" wrap="wrap" gap={16}>
-            <div style={{ textAlign: 'center' }}>
+          <div className="flex justify-around items-center flex-wrap gap-4">
+            <div className="text-center">
               <OeeGaugeChart title="가동률" value={avgAvailability} hasData={true} />
             </div>
-            <div style={{ textAlign: 'center' }}>
+            <div className="text-center">
               <OeeGaugeChart title="성능률" value={avgPerformance} hasData={hasProdData} />
             </div>
-            <div style={{ textAlign: 'center' }}>
+            <div className="text-center">
               <OeeGaugeChart title="양품률" value={avgQuality} hasData={hasProdData} />
             </div>
-          </Flex>
+          </div>
         )}
-      </Card>
+      </div>
 
       {/* Availability Bar Chart */}
-      <Card size="small" title="설비별 가동률" style={{ marginTop: 24 }}>
+      <div className="bg-white rounded-xl p-4 shadow-sm mt-6">
+        <h5 className="text-sm font-semibold text-gray-700 mb-4">설비별 가동률</h5>
         {loading ? (
-          <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Spin tip="데이터를 집계하는 중입니다..." />
+          <div className="h-[280px] flex items-center justify-center">
+            <Spinner tip="데이터를 집계하는 중입니다..." />
           </div>
         ) : availabilityBarData.length > 0 ? (
           <AvailabilityBarChart data={availabilityBarData} />
         ) : (
-          <Empty description="데이터가 없습니다" style={{ height: 280, paddingTop: 80 }} />
+          <div className="h-[280px] flex items-center justify-center">
+            <Empty description="데이터가 없습니다" />
+          </div>
         )}
-      </Card>
+      </div>
 
       {/* OEE Trend Chart */}
-      <Card size="small" title="OEE 추이" style={{ marginTop: 24 }}>
+      <div className="bg-white rounded-xl p-4 shadow-sm mt-6">
+        <h5 className="text-sm font-semibold text-gray-700 mb-4">OEE 추이</h5>
         {loading ? (
-          <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Spin tip="데이터를 집계하는 중입니다..." />
+          <div className="h-[240px] flex items-center justify-center">
+            <Spinner tip="데이터를 집계하는 중입니다..." />
           </div>
         ) : trendData.length > 0 ? (
           <OeeTrendChart data={trendData} />
         ) : (
-          <Empty description="데이터가 없습니다" style={{ height: 240, paddingTop: 60 }} />
+          <div className="h-[240px] flex items-center justify-center">
+            <Empty description="데이터가 없습니다" />
+          </div>
         )}
-      </Card>
+      </div>
 
       {/* DataGrid */}
-      <Card
-        size="small"
-        title="설비별 OEE 상세"
-        extra={
+      <div className="bg-white rounded-xl p-4 shadow-sm mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h5 className="text-sm font-semibold text-gray-700">설비별 OEE 상세</h5>
           <ExcelDownloadButton
             filename={`OEE리포트_${startDate}_${endDate}`}
             columns={excelColumns}
             data={gridRows as unknown as Record<string, unknown>[]}
             disabled={gridRows.length === 0 || loading}
           />
-        }
-        style={{ marginTop: 24 }}
-      >
+        </div>
         <Table<GridRow>
           columns={oeeColumns}
-          dataSource={gridRows}
+          dataSource={paginatedRows}
           rowKey="equip_cd"
           loading={loading}
-          size="small"
-          scroll={{ x: 'max-content' }}
-          pagination={{ pageSize: 20, showTotal: (total) => `총 ${total}건` }}
+          scrollX={1200}
+          pagination={{
+            current: tablePage,
+            pageSize,
+            total: gridRows.length,
+            onChange: (p) => setTablePage(p),
+          }}
         />
-      </Card>
+      </div>
     </div>
   );
 }

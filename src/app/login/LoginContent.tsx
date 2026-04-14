@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Form, Input, Button, Card, Typography, Alert, Space, theme } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { User, Lock } from 'lucide-react';
+import { Button, Alert } from '@/components/ui';
+import Input from '@/components/ui/Input';
 import { useAuthStore } from '@/stores/authStore';
 import { loginApi } from '@/lib/authApi';
-
-const { Title, Text } = Typography;
 
 interface LoginFormValues {
   login_id: string;
@@ -17,10 +16,13 @@ interface LoginFormValues {
 export default function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [form] = Form.useForm<LoginFormValues>();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const { token: themeToken } = theme.useToken();
+  const [formValues, setFormValues] = useState<LoginFormValues>({
+    login_id: '',
+    password: '',
+  });
+  const [errors, setErrors] = useState<Partial<Record<keyof LoginFormValues, string>>>({});
 
   const login = useAuthStore((s) => s.login);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -47,12 +49,23 @@ export default function LoginContent() {
         ? '세션이 만료되었습니다. 다시 로그인해 주세요.'
         : null;
 
-  const handleLogin = async (values: LoginFormValues) => {
+  const validate = (): boolean => {
+    const newErrors: Partial<Record<keyof LoginFormValues, string>> = {};
+    if (!formValues.login_id) newErrors.login_id = '아이디를 입력해 주세요';
+    if (!formValues.password) newErrors.password = '비밀번호를 입력해 주세요';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      const result = await loginApi(values);
+      const result = await loginApi(formValues);
       login(result.user, result.accessToken, result.refreshToken);
       router.push('/dashboard');
     } catch (err: unknown) {
@@ -66,30 +79,15 @@ export default function LoginContent() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: `linear-gradient(135deg, ${themeToken.colorPrimary}22 0%, ${themeToken.colorBgLayout} 100%)`,
-        padding: 16,
-      }}
-    >
-      <Card
-        style={{
-          width: '100%',
-          maxWidth: 400,
-          boxShadow: themeToken.boxShadowTertiary,
-        }}
-      >
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 to-gray-100 p-4">
+      <div className="w-full max-w-[400px] bg-white rounded-xl p-8 shadow-lg">
+        <div className="flex flex-col gap-6 w-full">
           {/* 타이틀 */}
-          <div style={{ textAlign: 'center' }}>
-            <Title level={3} style={{ margin: 0 }}>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 m-0">
               🍽️ Foodly MES
-            </Title>
-            <Text type="secondary">식품 제조 실행 시스템</Text>
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">식품 제조 실행 시스템</p>
           </div>
 
           {/* 세션 만료 안내 */}
@@ -114,47 +112,47 @@ export default function LoginContent() {
           )}
 
           {/* 로그인 폼 */}
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleLogin}
-            autoComplete="off"
-            size="large"
-          >
-            <Form.Item
-              name="login_id"
-              rules={[{ required: true, message: '아이디를 입력해 주세요' }]}
-            >
+          <form onSubmit={handleLogin} className="flex flex-col gap-4" autoComplete="off">
+            <div>
               <Input
-                prefix={<UserOutlined />}
+                addonBefore={<User className="w-4 h-4" />}
                 placeholder="아이디"
                 autoFocus
+                value={formValues.login_id}
+                onChange={(e) => setFormValues((v) => ({ ...v, login_id: e.target.value }))}
+                className={errors.login_id ? '!border-red-400' : ''}
               />
-            </Form.Item>
+              {errors.login_id && (
+                <p className="text-xs text-red-500 mt-1">{errors.login_id}</p>
+              )}
+            </div>
 
-            <Form.Item
-              name="password"
-              rules={[{ required: true, message: '비밀번호를 입력해 주세요' }]}
-            >
-              <Input.Password
-                prefix={<LockOutlined />}
+            <div>
+              <Input
+                type="password"
+                addonBefore={<Lock className="w-4 h-4" />}
                 placeholder="비밀번호"
+                value={formValues.password}
+                onChange={(e) => setFormValues((v) => ({ ...v, password: e.target.value }))}
+                className={errors.password ? '!border-red-400' : ''}
               />
-            </Form.Item>
+              {errors.password && (
+                <p className="text-xs text-red-500 mt-1">{errors.password}</p>
+              )}
+            </div>
 
-            <Form.Item style={{ marginBottom: 0 }}>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={loading}
-                block
-              >
-                로그인
-              </Button>
-            </Form.Item>
-          </Form>
-        </Space>
-      </Card>
+            <Button
+              variant="primary"
+              type="submit"
+              loading={loading}
+              block
+              size="large"
+            >
+              로그인
+            </Button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

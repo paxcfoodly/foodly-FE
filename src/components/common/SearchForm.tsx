@@ -1,25 +1,10 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  Form,
-  Input,
-  Select,
-  DatePicker,
-  Button,
-  Row,
-  Col,
-  Space,
-} from 'antd';
-import {
-  SearchOutlined,
-  ReloadOutlined,
-  DownOutlined,
-  UpOutlined,
-} from '@ant-design/icons';
-import type { Dayjs } from 'dayjs';
-
-const { RangePicker } = DatePicker;
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Search, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -65,7 +50,6 @@ export interface SearchFormProps {
 
 /** 기본 1행에 표시할 필드 수 (24 / 6 = 4) */
 const FIELDS_PER_ROW = 4;
-const DEFAULT_SPAN = 6;
 
 /* ── Component ─────────────────────────────────────── */
 
@@ -77,8 +61,27 @@ export default function SearchForm({
   loading = false,
   extraButtons,
 }: SearchFormProps) {
-  const [form] = Form.useForm();
+  const formRef = useRef<HTMLFormElement>(null);
   const [expanded, setExpanded] = useState(false);
+
+  /* 내부 상태: 각 필드 값을 name 기준으로 관리 */
+  const initialValues = useMemo(() => {
+    const vals: Record<string, unknown> = {};
+    fields.forEach((f) => {
+      if (f.defaultValue !== undefined) {
+        vals[f.name] = f.defaultValue;
+      } else {
+        vals[f.name] = '';
+      }
+    });
+    return vals;
+  }, [fields]);
+
+  const [values, setValues] = useState<Record<string, unknown>>(() => ({ ...initialValues }));
+
+  const setValue = useCallback((name: string, val: unknown) => {
+    setValues((prev) => ({ ...prev, [name]: val }));
+  }, []);
 
   /** 접기/펼치기가 필요한지 여부 */
   const needsCollapse = useMemo(() => {
@@ -94,135 +97,163 @@ export default function SearchForm({
     return fields.slice(0, maxVisible);
   }, [fields, needsCollapse, expanded, collapsedRows]);
 
-  /** 기본값 계산 */
-  const initialValues = useMemo(() => {
-    const vals: Record<string, unknown> = {};
-    fields.forEach((f) => {
-      if (f.defaultValue !== undefined) {
-        vals[f.name] = f.defaultValue;
-      }
-    });
-    return vals;
-  }, [fields]);
-
   /** 검색 실행 */
   const handleSearch = useCallback(() => {
-    const values = form.getFieldsValue();
-    // dayjs → string 변환
     const transformed: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(values)) {
-      if (val === undefined || val === null) continue;
-      if (Array.isArray(val) && val.length === 2 && val[0]?.format) {
-        // DateRange
-        transformed[key] = [
-          (val[0] as Dayjs).format('YYYY-MM-DD'),
-          (val[1] as Dayjs).format('YYYY-MM-DD'),
-        ];
-      } else if (val && typeof val === 'object' && 'format' in val) {
-        // Single Date
-        transformed[key] = (val as Dayjs).format('YYYY-MM-DD');
-      } else {
-        transformed[key] = val;
-      }
+      if (val === undefined || val === null || val === '') continue;
+      transformed[key] = val;
     }
     onSearch(transformed);
-  }, [form, onSearch]);
+  }, [values, onSearch]);
 
   /** 초기화 */
   const handleReset = useCallback(() => {
-    form.resetFields();
+    setValues({ ...initialValues });
     onReset?.();
-  }, [form, onReset]);
+  }, [initialValues, onReset]);
+
+  /** Enter 키로 검색 */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSearch();
+      }
+    },
+    [handleSearch],
+  );
 
   /** 필드 렌더링 */
-  const renderField = useCallback((field: SearchFieldDef) => {
-    switch (field.type) {
-      case 'text':
-        return (
-          <Input
-            placeholder={field.placeholder ?? `${field.label} 입력`}
-            allowClear
-            onPressEnter={handleSearch}
-          />
-        );
-      case 'select':
-        return (
-          <Select
-            placeholder={field.placeholder ?? `${field.label} 선택`}
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            mode={field.selectMode}
-            options={field.options}
-          />
-        );
-      case 'date':
-        return (
-          <DatePicker
-            placeholder={field.placeholder ?? '날짜 선택'}
-            style={{ width: '100%' }}
-          />
-        );
-      case 'dateRange':
-        return (
-          <RangePicker
-            placeholder={['시작일', '종료일']}
-            style={{ width: '100%' }}
-          />
-        );
-      default:
-        return <Input placeholder={field.placeholder} allowClear />;
-    }
-  }, [handleSearch]);
+  const renderField = useCallback(
+    (field: SearchFieldDef) => {
+      const fieldValue = values[field.name];
+
+      switch (field.type) {
+        case 'text':
+          return (
+            <Input
+              placeholder={field.placeholder ?? `${field.label} 입력`}
+              value={(fieldValue as string) ?? ''}
+              onChange={(e) => setValue(field.name, e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          );
+        case 'select':
+          return (
+            <Select
+              placeholder={field.placeholder ?? `${field.label} 선택`}
+              value={(fieldValue as string) ?? ''}
+              onChange={(e) => setValue(field.name, e.target.value)}
+              options={field.options?.map((o) => ({
+                label: o.label,
+                value: o.value,
+                disabled: o.disabled,
+              })) ?? []}
+            />
+          );
+        case 'date':
+          return (
+            <input
+              type="date"
+              className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700
+                transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+              placeholder={field.placeholder ?? '날짜 선택'}
+              value={(fieldValue as string) ?? ''}
+              onChange={(e) => setValue(field.name, e.target.value)}
+            />
+          );
+        case 'dateRange':
+          return (
+            <div className="flex items-center gap-1">
+              <input
+                type="date"
+                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700
+                  transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                placeholder="시작일"
+                value={
+                  Array.isArray(fieldValue) ? (fieldValue[0] as string) ?? '' : ''
+                }
+                onChange={(e) => {
+                  const current = Array.isArray(fieldValue) ? fieldValue : ['', ''];
+                  setValue(field.name, [e.target.value, current[1]]);
+                }}
+              />
+              <span className="text-gray-400 text-xs shrink-0">~</span>
+              <input
+                type="date"
+                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700
+                  transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                placeholder="종료일"
+                value={
+                  Array.isArray(fieldValue) ? (fieldValue[1] as string) ?? '' : ''
+                }
+                onChange={(e) => {
+                  const current = Array.isArray(fieldValue) ? fieldValue : ['', ''];
+                  setValue(field.name, [current[0], e.target.value]);
+                }}
+              />
+            </div>
+          );
+        default:
+          return (
+            <Input
+              placeholder={field.placeholder}
+              value={(fieldValue as string) ?? ''}
+              onChange={(e) => setValue(field.name, e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          );
+      }
+    },
+    [values, setValue, handleKeyDown],
+  );
 
   return (
-    <div
-      style={{
-        background: '#fff',
-        padding: '16px 16px 0',
-        marginBottom: 16,
-        borderRadius: 6,
-        border: '1px solid #f0f0f0',
-      }}
-    >
-      <Form form={form} initialValues={initialValues} layout="vertical">
-        <Row gutter={16}>
+    <div className="rounded-lg p-4 pb-0 mb-4 bg-dark-700">
+      <form ref={formRef} onSubmit={(e) => { e.preventDefault(); handleSearch(); }}>
+        <div className="grid grid-cols-4 gap-4">
           {visibleFields.map((field) => (
-            <Col key={field.name} span={field.span ?? DEFAULT_SPAN}>
-              <Form.Item name={field.name} label={field.label} style={{ marginBottom: 12 }}>
-                {renderField(field)}
-              </Form.Item>
-            </Col>
+            <div key={field.name} className={field.span === 12 ? 'col-span-2' : ''}>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                {field.label}
+              </label>
+              {renderField(field)}
+            </div>
           ))}
-        </Row>
+        </div>
 
-        <Row justify="end" style={{ marginBottom: 12 }}>
-          <Space>
-            {needsCollapse && (
-              <Button
-                type="link"
-                size="small"
-                icon={expanded ? <UpOutlined /> : <DownOutlined />}
-                onClick={() => setExpanded((prev) => !prev)}
-              >
-                {expanded ? '접기' : '펼치기'}
-              </Button>
-            )}
-            {extraButtons}
-            <Button icon={<ReloadOutlined />} onClick={handleReset}>
-              초기화
-            </Button>
+        <div className="flex justify-end items-center gap-2 py-3">
+          {needsCollapse && (
             <Button
-              type="primary"
-              icon={<SearchOutlined />}
-              onClick={handleSearch}
-              loading={loading}
+              variant="link"
+              size="small"
+              icon={expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              onClick={() => setExpanded((prev) => !prev)}
+              type="button"
             >
-              검색
+              {expanded ? '접기' : '펼치기'}
             </Button>
-          </Space>
-        </Row>
-      </Form>
+          )}
+          {extraButtons}
+          <Button
+            icon={<RotateCcw className="w-4 h-4" />}
+            onClick={handleReset}
+            type="button"
+          >
+            초기화
+          </Button>
+          <Button
+            variant="primary"
+            icon={<Search className="w-4 h-4" />}
+            onClick={handleSearch}
+            loading={loading}
+            type="button"
+          >
+            검색
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

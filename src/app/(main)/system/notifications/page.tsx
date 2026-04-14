@@ -1,21 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Table,
-  Switch,
-  Tag,
-  Modal,
-  Form,
-  Select,
-  message,
-  Popconfirm,
-  Button,
-  Card,
-  Space,
-  Empty,
-} from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
+import Tag from '@/components/ui/Tag';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Select from '@/components/ui/Select';
+import FormField from '@/components/ui/FormField';
+import Switch from '@/components/ui/Switch';
+import Table from '@/components/ui/Table';
+import Empty from '@/components/ui/Empty';
+import toast from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm';
 import CommonCodeSelect from '@/components/common/CommonCodeSelect';
 import PermissionButton from '@/components/auth/PermissionButton';
 import apiClient from '@/lib/apiClient';
@@ -46,7 +42,6 @@ interface NotiRuleFormValues {
   event_type: string;
   target_role_cd: string;
   channel: string;
-  [key: string]: unknown;
 }
 
 const CHANNEL_OPTIONS = [{ value: 'IN_APP', label: '화면내알림' }];
@@ -61,7 +56,11 @@ export default function NotificationsPage() {
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<NotiRule | null>(null);
-  const [form] = Form.useForm<NotiRuleFormValues>();
+  const [formValues, setFormValues] = useState<NotiRuleFormValues>({
+    event_type: '',
+    target_role_cd: '',
+    channel: 'IN_APP',
+  });
   const [saving, setSaving] = useState(false);
 
   /* ── Data fetch ─── */
@@ -72,7 +71,7 @@ export default function NotificationsPage() {
       const res = await apiClient.get<ApiResponse<NotiRule[]>>('/v1/noti-rules');
       setRules(Array.isArray(res.data.data) ? res.data.data : []);
     } catch {
-      message.error('알림 규칙을 불러오지 못했습니다. 페이지를 새로고침하세요.');
+      toast.error('알림 규칙을 불러오지 못했습니다. 페이지를 새로고침하세요.');
     } finally {
       setLoading(false);
     }
@@ -108,7 +107,7 @@ export default function NotificationsPage() {
         setRules((prev) =>
           prev.map((r) => (r.rule_id === rule.rule_id ? { ...r, use_yn: rule.use_yn } : r)),
         );
-        message.error('상태 변경에 실패했습니다.');
+        toast.error('상태 변경에 실패했습니다.');
       }
     },
     [],
@@ -118,10 +117,10 @@ export default function NotificationsPage() {
     async (ruleId: number) => {
       try {
         await apiClient.delete(`/v1/noti-rules/${ruleId}`);
-        message.success('알림 규칙이 삭제되었습니다.');
+        toast.success('알림 규칙이 삭제되었습니다.');
         fetchRules();
       } catch {
-        message.error('삭제에 실패했습니다. 다시 시도하세요.');
+        toast.error('삭제에 실패했습니다. 다시 시도하세요.');
       }
     },
     [fetchRules],
@@ -129,50 +128,51 @@ export default function NotificationsPage() {
 
   const handleCreate = useCallback(() => {
     setEditTarget(null);
-    form.resetFields();
+    setFormValues({ event_type: '', target_role_cd: '', channel: 'IN_APP' });
     setModalOpen(true);
-  }, [form]);
+  }, []);
 
   const handleEdit = useCallback(
     (rule: NotiRule) => {
       setEditTarget(rule);
-      form.setFieldsValue({
+      setFormValues({
         event_type: rule.event_type,
         target_role_cd: rule.target_role_cd,
         channel: rule.channel,
       });
       setModalOpen(true);
     },
-    [form],
+    [],
   );
 
   const handleModalSave = useCallback(async () => {
+    if (!formValues.event_type || !formValues.target_role_cd || !formValues.channel) {
+      toast.warning('모든 필수 항목을 입력해주세요.');
+      return;
+    }
     try {
-      const values = await form.validateFields();
       setSaving(true);
       if (editTarget) {
-        await apiClient.put(`/v1/noti-rules/${editTarget.rule_id}`, values);
+        await apiClient.put(`/v1/noti-rules/${editTarget.rule_id}`, formValues);
       } else {
-        await apiClient.post('/v1/noti-rules', values);
+        await apiClient.post('/v1/noti-rules', formValues);
       }
-      message.success('알림 규칙이 저장되었습니다.');
+      toast.success('알림 규칙이 저장되었습니다.');
       setModalOpen(false);
-      form.resetFields();
+      setFormValues({ event_type: '', target_role_cd: '', channel: 'IN_APP' });
       fetchRules();
-    } catch (err: unknown) {
-      const e = err as { errorFields?: unknown[] };
-      if (e?.errorFields) return;
-      message.error('저장에 실패했습니다. 다시 시도하세요.');
+    } catch {
+      toast.error('저장에 실패했습니다. 다시 시도하세요.');
     } finally {
       setSaving(false);
     }
-  }, [editTarget, form, fetchRules]);
+  }, [editTarget, formValues, fetchRules]);
 
   const handleModalCancel = useCallback(() => {
     setModalOpen(false);
-    form.resetFields();
+    setFormValues({ event_type: '', target_role_cd: '', channel: 'IN_APP' });
     setEditTarget(null);
-  }, [form]);
+  }, []);
 
   /* ── Role options ─── */
   const roleOptions = roles.map((r) => ({ label: r.role_nm, value: r.role_cd }));
@@ -183,13 +183,13 @@ export default function NotificationsPage() {
       title: '알림유형',
       dataIndex: 'event_type',
       width: 160,
-      render: (val: string) => <Tag color="blue">{val}</Tag>,
+      render: (val: unknown) => <Tag color="blue">{val as string}</Tag>,
     },
     {
       title: '수신자 역할',
       dataIndex: 'target_role_cd',
       width: 160,
-      render: (_: string, record: NotiRule) => (
+      render: (_: unknown, record: NotiRule) => (
         <Tag>{record.target_role?.role_nm ?? record.target_role_cd}</Tag>
       ),
     },
@@ -197,9 +197,9 @@ export default function NotificationsPage() {
       title: '채널',
       dataIndex: 'channel',
       width: 120,
-      render: (val: string) => {
+      render: (val: unknown) => {
         const opt = CHANNEL_OPTIONS.find((o) => o.value === val);
-        return opt ? opt.label : val;
+        return opt ? opt.label : (val as string);
       },
     },
     {
@@ -207,9 +207,9 @@ export default function NotificationsPage() {
       dataIndex: 'use_yn',
       width: 90,
       align: 'center' as const,
-      render: (val: string, record: NotiRule) => (
+      render: (val: unknown, record: NotiRule) => (
         <Switch
-          checked={val === 'Y'}
+          checked={(val as string) === 'Y'}
           onChange={(checked) => handleToggle(record, checked)}
           size="small"
         />
@@ -221,38 +221,38 @@ export default function NotificationsPage() {
       width: 100,
       align: 'center' as const,
       render: (_: unknown, record: NotiRule) => (
-        <Space size={4}>
+        <div className="flex items-center gap-1 justify-center">
           <PermissionButton
             action="update"
             menuUrl={MENU_URL}
             fallback="hide"
             size="small"
-            type="text"
-            icon={<EditOutlined />}
+            variant="ghost"
+            icon={<Pencil className="w-4 h-4" />}
             onClick={() => handleEdit(record)}
           >
             {''}
           </PermissionButton>
-          <Popconfirm
-            title="이 알림 규칙을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다."
-            onConfirm={() => handleDelete(record.rule_id)}
-            okText="삭제"
-            okType="danger"
-            cancelText="취소"
+          <PermissionButton
+            action="delete"
+            menuUrl={MENU_URL}
+            fallback="hide"
+            size="small"
+            variant="danger"
+            icon={<Trash2 className="w-4 h-4" />}
+            onClick={() => {
+              confirm({
+                title: '알림 규칙 삭제',
+                content: '이 알림 규칙을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.',
+                okText: '삭제',
+                danger: true,
+                onOk: () => handleDelete(record.rule_id),
+              });
+            }}
           >
-            <PermissionButton
-              action="delete"
-              menuUrl={MENU_URL}
-              fallback="hide"
-              size="small"
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-            >
-              {''}
-            </PermissionButton>
-          </Popconfirm>
-        </Space>
+            {''}
+          </PermissionButton>
+        </div>
       ),
     },
   ];
@@ -260,76 +260,77 @@ export default function NotificationsPage() {
   /* ── Render ─── */
   return (
     <>
-      <Card
-        title="알림설정"
-        extra={
+      <div className="bg-white rounded-xl shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h3 className="text-base font-semibold text-gray-900">알림설정</h3>
           <PermissionButton
             action="create"
             menuUrl={MENU_URL}
-            type="primary"
-            icon={<PlusOutlined />}
+            variant="primary"
+            icon={<Plus className="w-4 h-4" />}
             onClick={handleCreate}
           >
             알림 규칙 추가
           </PermissionButton>
-        }
-      >
-        {!loading && rules.length === 0 ? (
-          <Empty
-            description={
-              <div>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>등록된 알림 규칙이 없습니다</div>
-                <div>알림 규칙 추가 버튼을 눌러 첫 번째 알림 규칙을 만드세요.</div>
-              </div>
-            }
-          />
-        ) : (
-          <Table
-            columns={columns}
-            dataSource={rules}
-            rowKey="rule_id"
-            loading={loading}
-            pagination={false}
-            size="small"
-          />
-        )}
-      </Card>
+        </div>
+        <div className="p-6">
+          {!loading && rules.length === 0 ? (
+            <Empty
+              description={
+                <div>
+                  <div className="font-semibold mb-1">등록된 알림 규칙이 없습니다</div>
+                  <div>알림 규칙 추가 버튼을 눌러 첫 번째 알림 규칙을 만드세요.</div>
+                </div>
+              }
+            />
+          ) : (
+            <Table
+              columns={columns}
+              dataSource={rules}
+              rowKey="rule_id"
+              loading={loading}
+            />
+          )}
+        </div>
+      </div>
 
       {/* 추가/편집 Modal */}
       <Modal
         open={modalOpen}
         title={editTarget ? '알림 규칙 편집' : '알림 규칙 추가'}
-        onOk={handleModalSave}
-        onCancel={handleModalCancel}
-        okText="저장"
-        cancelText="취소"
-        confirmLoading={saving}
-        destroyOnClose
+        onClose={handleModalCancel}
+        footer={
+          <div className="flex items-center gap-2">
+            <Button onClick={handleModalCancel}>취소</Button>
+            <Button variant="primary" loading={saving} onClick={handleModalSave}>저장</Button>
+          </div>
+        }
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="event_type"
-            label="알림유형"
-            rules={[{ required: true, message: '알림유형은(는) 필수입니다.' }]}
-          >
-            <CommonCodeSelect groupCd="NOTI_TYPE" placeholder="알림유형 선택" />
-          </Form.Item>
-          <Form.Item
-            name="target_role_cd"
-            label="수신자 역할"
-            rules={[{ required: true, message: '수신자 역할은(는) 필수입니다.' }]}
-          >
-            <Select options={roleOptions} placeholder="역할 선택" />
-          </Form.Item>
-          <Form.Item
-            name="channel"
-            label="채널"
-            initialValue="IN_APP"
-            rules={[{ required: true, message: '채널은(는) 필수입니다.' }]}
-          >
-            <Select options={CHANNEL_OPTIONS} />
-          </Form.Item>
-        </Form>
+        <div className="space-y-4">
+          <FormField label="알림유형" required>
+            <CommonCodeSelect
+              groupCd="NOTI_TYPE"
+              placeholder="알림유형 선택"
+              value={formValues.event_type}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, event_type: e.target.value }))}
+            />
+          </FormField>
+          <FormField label="수신자 역할" required>
+            <Select
+              placeholder="역할 선택"
+              options={roleOptions}
+              value={formValues.target_role_cd}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, target_role_cd: e.target.value }))}
+            />
+          </FormField>
+          <FormField label="채널" required>
+            <Select
+              options={CHANNEL_OPTIONS}
+              value={formValues.channel}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, channel: e.target.value }))}
+            />
+          </FormField>
+        </div>
       </Modal>
     </>
   );

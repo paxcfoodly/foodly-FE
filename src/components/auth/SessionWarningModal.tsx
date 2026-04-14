@@ -1,10 +1,8 @@
 'use client';
 
-import { Modal, Typography } from 'antd';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { Modal, Button } from '@/components/ui';
+import { AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
-
-const { Text } = Typography;
 
 export default function SessionWarningModal() {
   const showWarning = useAuthStore((s) => s.showSessionWarning);
@@ -13,26 +11,35 @@ export default function SessionWarningModal() {
 
   return (
     <Modal
+      open={showWarning}
+      onClose={dismiss}
       title={
-        <>
-          <ExclamationCircleOutlined style={{ color: '#faad14', marginRight: 8 }} />
+        <span className="flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-yellow-500" />
           세션 만료 경고
+        </span>
+      }
+      maskClosable={false}
+      footer={
+        <>
+          <Button
+            variant="default"
+            onClick={() => {
+              logout();
+              window.location.href = '/login';
+            }}
+          >
+            로그아웃
+          </Button>
+          <Button variant="primary" onClick={dismiss}>
+            계속 사용하기
+          </Button>
         </>
       }
-      open={showWarning}
-      okText="계속 사용하기"
-      cancelText="로그아웃"
-      onOk={dismiss}
-      onCancel={() => {
-        logout();
-        window.location.href = '/login';
-      }}
-      closable={false}
-      maskClosable={false}
     >
-      <Text>
+      <p className="text-sm text-gray-600">
         5분 후 자동 로그아웃됩니다. 계속 사용하시려면 &quot;계속 사용하기&quot;를 클릭하세요.
-      </Text>
+      </p>
     </Modal>
   );
 }

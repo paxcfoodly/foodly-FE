@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { Card, Typography, Tag, message, Button, Space, Form, Input } from 'antd';
-import { HistoryOutlined } from '@ant-design/icons';
+import { History } from 'lucide-react';
+import Tag from '@/components/ui/Tag';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import FormField from '@/components/ui/FormField';
+import toast from '@/components/ui/toast';
 import DataGrid, { type DataGridColumn } from '@/components/common/DataGrid';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
 import CommonCodeSelect from '@/components/common/CommonCodeSelect';
@@ -12,8 +16,6 @@ import ExcelDownloadButton from '@/components/common/ExcelDownloadButton';
 import ExcelUploadButton from '@/components/common/ExcelUploadButton';
 import FileUpload from '@/components/common/FileUpload';
 import DataHistoryDrawer from '@/components/common/DataHistoryDrawer';
-
-const { Title } = Typography;
 
 /* ── Mock 데이터 ─── */
 
@@ -126,7 +128,7 @@ export default function ComponentDemoPage() {
 
   const handleSearch = useCallback((values: Record<string, unknown>) => {
     setPage(1);
-    message.success(`검색 실행: ${JSON.stringify(values)}`);
+    toast.success(`검색 실행: ${JSON.stringify(values)}`);
   }, []);
 
   const handleReset = useCallback(() => {
@@ -169,7 +171,7 @@ export default function ComponentDemoPage() {
       title: '삭제 확인',
       content: '선택한 항목을 삭제하시겠습니까?',
     });
-    message.info(ok ? '삭제 확인됨' : '삭제 취소됨');
+    toast.info(ok ? '삭제 확인됨' : '삭제 취소됨');
   }, []);
 
   const handleAlert = useCallback(async () => {
@@ -183,10 +185,10 @@ export default function ComponentDemoPage() {
   }, []);
 
   return (
-    <div style={{ padding: 0 }}>
-      <Title level={4}>공통 컴포넌트 데모</Title>
+    <div>
+      <h4 className="text-lg font-semibold mb-4">공통 컴포넌트 데모</h4>
 
-      <Title level={5} style={{ marginTop: 16 }}>SearchForm + CommonCodeSelect</Title>
+      <h5 className="text-base font-medium mt-4 mb-2">SearchForm + CommonCodeSelect</h5>
       <SearchForm
         fields={searchFields}
         onSearch={handleSearch}
@@ -195,29 +197,30 @@ export default function ComponentDemoPage() {
         collapsedRows={1}
       />
 
-      <Card size="small" title="CommonCodeSelect 단독 사용" style={{ marginBottom: 16 }}>
+      <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
+        <h6 className="text-sm font-medium text-gray-500 mb-2">CommonCodeSelect 단독 사용</h6>
         <CommonCodeSelect
           groupCd="ITEM_TYPE"
           showAll
           style={{ width: 240 }}
           placeholder="품목유형 선택"
         />
-      </Card>
+      </div>
 
       {/* ── 모달 데모 ─── */}
-      <Title level={5}>FormModal / Confirm / Alert</Title>
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Space wrap>
-          <Button type="primary" onClick={openCreateModal}>
+      <h5 className="text-base font-medium mt-4 mb-2">FormModal / Confirm / Alert</h5>
+      <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="primary" onClick={openCreateModal}>
             신규 등록 모달
           </Button>
           <Button onClick={openEditModal}>수정 모달</Button>
-          <Button danger onClick={handleConfirm}>
+          <Button variant="danger" onClick={handleConfirm}>
             삭제 확인 모달
           </Button>
           <Button onClick={handleAlert}>알림 모달</Button>
-        </Space>
-      </Card>
+        </div>
+      </div>
 
       <FormModal
         open={modalOpen}
@@ -229,31 +232,41 @@ export default function ComponentDemoPage() {
       >
         {(form, mode) => (
           <>
-            <Form.Item
-              name="itemCd"
-              label="품목코드"
-              rules={[{ required: true, message: '품목코드를 입력하세요' }]}
-            >
-              <Input disabled={mode === 'edit'} placeholder="ITM-00001" />
-            </Form.Item>
-            <Form.Item
-              name="itemNm"
-              label="품목명"
-              rules={[{ required: true, message: '품목명을 입력하세요' }]}
-            >
-              <Input placeholder="품목명 입력" />
-            </Form.Item>
-            <Form.Item name="spec" label="규격">
-              <Input placeholder="규격 입력" />
-            </Form.Item>
+            <FormField label="품목코드" required>
+              <Input
+                name="itemCd"
+                disabled={mode === 'edit'}
+                placeholder="ITM-00001"
+                required
+                value={(form.getFieldsValue().itemCd as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ itemCd: e.target.value })}
+              />
+            </FormField>
+            <FormField label="품목명" required>
+              <Input
+                name="itemNm"
+                placeholder="품목명 입력"
+                required
+                value={(form.getFieldsValue().itemNm as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ itemNm: e.target.value })}
+              />
+            </FormField>
+            <FormField label="규격">
+              <Input
+                name="spec"
+                placeholder="규격 입력"
+                value={(form.getFieldsValue().spec as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ spec: e.target.value })}
+              />
+            </FormField>
           </>
         )}
       </FormModal>
 
       {/* ── 엑셀 / 파일 데모 ─── */}
-      <Title level={5}>엑셀 다운로드 / 업로드 / 파일 업로드</Title>
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Space wrap>
+      <h5 className="text-base font-medium mt-4 mb-2">엑셀 다운로드 / 업로드 / 파일 업로드</h5>
+      <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
+        <div className="flex flex-wrap items-center gap-2">
           <ExcelDownloadButton
             filename="품목목록"
             columns={excelColumns}
@@ -261,12 +274,13 @@ export default function ComponentDemoPage() {
           />
           <ExcelUploadButton
             uploadUrl="/v1/items/import"
-            onComplete={(r) => message.info(`업로드 완료: 성공 ${r.successCount}, 실패 ${r.errorCount}`)}
+            onComplete={(r) => toast.info(`업로드 완료: 성공 ${r.successCount}, 실패 ${r.errorCount}`)}
           />
-        </Space>
-      </Card>
+        </div>
+      </div>
 
-      <Card size="small" title="파일 업로드" style={{ marginBottom: 16 }}>
+      <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
+        <h6 className="text-sm font-medium text-gray-500 mb-2">파일 업로드</h6>
         <FileUpload
           maxCount={3}
           maxSizeMB={5}
@@ -275,15 +289,15 @@ export default function ComponentDemoPage() {
           refId="1"
           dragger
         />
-      </Card>
+      </div>
 
       {/* ── 변경이력 데모 ─── */}
-      <Title level={5}>변경이력 드로어</Title>
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Button icon={<HistoryOutlined />} onClick={openHistory}>
+      <h5 className="text-base font-medium mt-4 mb-2">변경이력 드로어</h5>
+      <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
+        <Button icon={<History className="w-4 h-4" />} onClick={openHistory}>
           변경이력 보기
         </Button>
-      </Card>
+      </div>
 
       <DataHistoryDrawer
         open={historyOpen}
@@ -293,7 +307,7 @@ export default function ComponentDemoPage() {
       />
 
       {/* ── DataGrid ─── */}
-      <Title level={5}>DataGrid</Title>
+      <h5 className="text-base font-medium mt-4 mb-2">DataGrid</h5>
       <DataGrid<SampleItem>
         columns={gridColumns}
         dataSource={data}
@@ -314,9 +328,9 @@ export default function ComponentDemoPage() {
       />
 
       {selectedKeys.length > 0 && (
-        <Card size="small" style={{ marginTop: 8 }}>
+        <div className="bg-white rounded-xl p-4 shadow-sm mt-2">
           선택된 행: {selectedKeys.join(', ')}
-        </Card>
+        </div>
       )}
     </div>
   );

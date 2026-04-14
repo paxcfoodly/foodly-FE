@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Select, message } from 'antd';
-import type { SelectProps } from 'antd';
+import Select from '@/components/ui/Select';
+import type { SelectOption } from '@/components/ui/Select';
+import toast from '@/components/ui/toast';
 import apiClient from '@/lib/apiClient';
 import type { ApiResponse } from '@/types';
 
@@ -16,7 +17,7 @@ interface CodeItem {
 }
 
 export interface CommonCodeSelectProps
-  extends Omit<SelectProps, 'options' | 'loading'> {
+  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
   /** 공통코드 그룹 코드 */
   groupCd: string;
   /** '전체' 옵션 추가 여부 (기본 false) */
@@ -25,6 +26,8 @@ export interface CommonCodeSelectProps
   allLabel?: string;
   /** 비활성 코드 포함 여부 (기본 false) */
   includeInactive?: boolean;
+  /** placeholder */
+  placeholder?: string;
 }
 
 /* ── FE-side cache (per groupCd) ───────────────────── */
@@ -64,9 +67,30 @@ export default function CommonCodeSelect({
   placeholder,
   ...restProps
 }: CommonCodeSelectProps) {
-  const [options, setOptions] = useState<SelectProps['options']>([]);
+  const [options, setOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(false);
   const mountedRef = useRef(true);
+
+  const buildOptions = useCallback(
+    (codes: CodeItem[]) => {
+      let filtered = codes;
+      if (!includeInactive) {
+        filtered = codes.filter((c) => c.use_yn === 'Y');
+      }
+
+      const opts: SelectOption[] = filtered.map((c) => ({
+        label: c.code_nm,
+        value: c.code,
+      }));
+
+      if (showAll) {
+        opts.unshift({ label: allLabel, value: '' });
+      }
+
+      setOptions(opts);
+    },
+    [includeInactive, showAll, allLabel],
+  );
 
   const fetchCodes = useCallback(async () => {
     if (!groupCd) return;
@@ -90,34 +114,13 @@ export default function CommonCodeSelect({
       }
     } catch {
       if (mountedRef.current) {
-        message.error(`공통코드(${groupCd}) 조회 실패`);
+        toast.error(`공통코드(${groupCd}) 조회 실패`);
         setOptions([]);
       }
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [groupCd, includeInactive, showAll, allLabel]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const buildOptions = useCallback(
-    (codes: CodeItem[]) => {
-      let filtered = codes;
-      if (!includeInactive) {
-        filtered = codes.filter((c) => c.use_yn === 'Y');
-      }
-
-      const opts: SelectProps['options'] = filtered.map((c) => ({
-        label: c.code_nm,
-        value: c.code,
-      }));
-
-      if (showAll) {
-        opts.unshift({ label: allLabel, value: '' });
-      }
-
-      setOptions(opts);
-    },
-    [includeInactive, showAll, allLabel],
-  );
+  }, [groupCd, buildOptions]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -130,10 +133,7 @@ export default function CommonCodeSelect({
   return (
     <Select
       placeholder={placeholder ?? '선택'}
-      allowClear
-      showSearch
-      optionFilterProp="label"
-      loading={loading}
+      disabled={loading || restProps.disabled}
       options={options}
       {...restProps}
     />

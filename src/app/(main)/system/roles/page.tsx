@@ -1,26 +1,17 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Button,
-  Space,
-  Tag,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Checkbox,
-  Table,
-  Card,
-  message,
-  Spin,
-} from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  SaveOutlined,
-} from '@ant-design/icons';
+import { Plus, Pencil, Trash2, Save } from 'lucide-react';
+import Tag from '@/components/ui/Tag';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import FormField from '@/components/ui/FormField';
+import Spinner from '@/components/ui/Spinner';
+import Table from '@/components/ui/Table';
+import toast from '@/components/ui/toast';
 import PermissionButton from '@/components/auth/PermissionButton';
 import FormModal, { type FormModalMode } from '@/components/common/FormModal';
 import apiClient from '@/lib/apiClient';
@@ -72,6 +63,7 @@ interface MenuItem {
   sort_order: number;
   depth: number;
   use_yn: string;
+  [key: string]: unknown;
 }
 
 const MENU_URL = '/system/roles';
@@ -115,7 +107,7 @@ export default function RolesPage() {
       const data = res.data.data;
       setRoles(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '역할 목록 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '역할 목록 조회에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -124,12 +116,9 @@ export default function RolesPage() {
   /* ── Fetch menus for permission matrix ─── */
   const fetchMenus = useCallback(async () => {
     try {
-      // Get menus from a generic endpoint; if it doesn't exist, we'll grab from roles detail
       const res = await apiClient.get<ApiResponse<MenuItem[]>>('/v1/common-codes/menus');
       setMenus(Array.isArray(res.data.data) ? res.data.data : []);
     } catch {
-      // Fallback: fetch all menus from Prisma via a custom admin endpoint
-      // For now, menus will be populated from role detail
       setMenus([]);
     }
   }, []);
@@ -173,7 +162,7 @@ export default function RolesPage() {
         if (menuList.length > 0) setMenus(menuList);
       }
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '역할 상세 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '역할 상세 조회에 실패했습니다.');
     } finally {
       setMatrixLoading(false);
     }
@@ -235,10 +224,10 @@ export default function RolesPage() {
         }));
 
       await apiClient.put(`/v1/roles/${selectedRoleCd}/permissions`, { permissions });
-      message.success('권한이 저장되었습니다.');
+      toast.success('권한이 저장되었습니다.');
       fetchRoleDetail(selectedRoleCd);
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '권한 저장에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '권한 저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -286,7 +275,7 @@ export default function RolesPage() {
     if (!deleteTarget) return;
     try {
       await apiClient.delete(`/v1/roles/${deleteTarget.role_cd}`);
-      message.success('역할이 삭제되었습니다.');
+      toast.success('역할이 삭제되었습니다.');
       setDeleteTarget(null);
       if (selectedRoleCd === deleteTarget.role_cd) {
         setSelectedRoleCd(null);
@@ -295,7 +284,7 @@ export default function RolesPage() {
       }
       fetchRoles();
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
     }
   }, [deleteTarget, selectedRoleCd, fetchRoles]);
 
@@ -317,7 +306,6 @@ export default function RolesPage() {
         title: '메뉴',
         dataIndex: 'menu_nm',
         width: 200,
-        fixed: 'left' as const,
       },
       ...PERMISSION_KEYS.map((key) => ({
         title: PERMISSION_LABELS[key],
@@ -325,7 +313,9 @@ export default function RolesPage() {
         width: 80,
         align: 'center' as const,
         render: (_: unknown, record: MenuItem) => (
-          <Checkbox
+          <input
+            type="checkbox"
+            className="accent-cyan-accent w-4 h-4"
             checked={permissionMap[record.menu_id]?.[key] ?? false}
             onChange={(e) => handlePermissionToggle(record.menu_id, key, e.target.checked)}
           />
@@ -339,11 +329,11 @@ export default function RolesPage() {
         render: (_: unknown, record: MenuItem) => {
           const perms = permissionMap[record.menu_id];
           const allChecked = perms && PERMISSION_KEYS.every((k) => perms[k]);
-          const someChecked = perms && PERMISSION_KEYS.some((k) => perms[k]);
           return (
-            <Checkbox
+            <input
+              type="checkbox"
+              className="accent-cyan-accent w-4 h-4"
               checked={!!allChecked}
-              indeterminate={someChecked && !allChecked}
               onChange={(e) => handleRowToggleAll(record.menu_id, e.target.checked)}
             />
           );
@@ -355,54 +345,45 @@ export default function RolesPage() {
 
   /* ── Render ─── */
   return (
-    <div style={{ display: 'flex', gap: 16, height: '100%' }}>
+    <div className="flex gap-4 h-full">
       {/* 좌측: 역할 목록 */}
-      <Card
-        title="역할 목록"
-        style={{ width: 360, flexShrink: 0 }}
-        bodyStyle={{ padding: 0 }}
-        extra={
+      <div className="w-[360px] shrink-0 bg-white rounded-xl shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h3 className="text-base font-semibold text-gray-900">역할 목록</h3>
           <PermissionButton
             action="create"
             menuUrl={MENU_URL}
-            type="primary"
+            variant="primary"
             size="small"
-            icon={<PlusOutlined />}
+            icon={<Plus className="w-4 h-4" />}
             onClick={handleCreate}
           >
             등록
           </PermissionButton>
-        }
-      >
-        <Spin spinning={loading}>
-          <div style={{ maxHeight: 'calc(100vh - 260px)', overflowY: 'auto' }}>
+        </div>
+        <Spinner spinning={loading}>
+          <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
             {roles.map((role) => (
               <div
                 key={role.role_cd}
                 onClick={() => setSelectedRoleCd(role.role_cd)}
-                style={{
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid #f0f0f0',
-                  backgroundColor: selectedRoleCd === role.role_cd ? '#e6f4ff' : undefined,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
+                className={`px-4 py-3 cursor-pointer border-b border-gray-50 flex justify-between items-center hover:bg-gray-50 ${
+                  selectedRoleCd === role.role_cd ? 'bg-blue-50' : ''
+                }`}
               >
                 <div>
-                  <div style={{ fontWeight: 500 }}>{role.role_nm}</div>
-                  <div style={{ fontSize: 12, color: '#999' }}>
+                  <div className="font-medium">{role.role_nm}</div>
+                  <div className="text-xs text-gray-400">
                     {role.role_cd}
                     {role._count && (
-                      <span style={{ marginLeft: 8 }}>
+                      <span className="ml-2">
                         사용자 {role._count.users}명
                       </span>
                     )}
                   </div>
                 </div>
-                <Space size={4}>
-                  <Tag color={role.use_yn === 'Y' ? 'green' : 'default'}>
+                <div className="flex items-center gap-1">
+                  <Tag color={role.use_yn === 'Y' ? 'green' : 'gray'}>
                     {role.use_yn === 'Y' ? '사용' : '미사용'}
                   </Tag>
                   <PermissionButton
@@ -410,8 +391,8 @@ export default function RolesPage() {
                     menuUrl={MENU_URL}
                     fallback="hide"
                     size="small"
-                    type="text"
-                    icon={<EditOutlined />}
+                    variant="ghost"
+                    icon={<Pencil className="w-4 h-4" />}
                     onClick={(e) => {
                       e?.stopPropagation();
                       handleEdit(role);
@@ -424,9 +405,8 @@ export default function RolesPage() {
                     menuUrl={MENU_URL}
                     fallback="hide"
                     size="small"
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
+                    variant="danger"
+                    icon={<Trash2 className="w-4 h-4" />}
                     onClick={(e) => {
                       e?.stopPropagation();
                       setDeleteTarget(role);
@@ -434,58 +414,55 @@ export default function RolesPage() {
                   >
                     {''}
                   </PermissionButton>
-                </Space>
+                </div>
               </div>
             ))}
             {roles.length === 0 && !loading && (
-              <div style={{ padding: 24, textAlign: 'center', color: '#999' }}>
+              <div className="p-6 text-center text-gray-400">
                 등록된 역할이 없습니다.
               </div>
             )}
           </div>
-        </Spin>
-      </Card>
+        </Spinner>
+      </div>
 
       {/* 우측: 권한 매트릭스 */}
-      <Card
-        title={
-          selectedRoleCd
-            ? `${roleDetail?.role_nm ?? selectedRoleCd} 메뉴 권한 설정`
-            : '메뉴 권한 설정'
-        }
-        style={{ flex: 1, minWidth: 0 }}
-        extra={
-          selectedRoleCd && (
+      <div className="flex-1 min-w-0 bg-white rounded-xl shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h3 className="text-base font-semibold text-gray-900">
+            {selectedRoleCd
+              ? `${roleDetail?.role_nm ?? selectedRoleCd} 메뉴 권한 설정`
+              : '메뉴 권한 설정'}
+          </h3>
+          {selectedRoleCd && (
             <PermissionButton
               action="update"
               menuUrl={MENU_URL}
-              type="primary"
-              icon={<SaveOutlined />}
+              variant="primary"
+              icon={<Save className="w-4 h-4" />}
               loading={saving}
               onClick={handleSavePermissions}
             >
               권한 저장
             </PermissionButton>
-          )
-        }
-      >
-        {!selectedRoleCd ? (
-          <div style={{ textAlign: 'center', padding: 48, color: '#999' }}>
-            좌측에서 역할을 선택해주세요.
-          </div>
-        ) : (
-          <Table
-            columns={matrixColumns}
-            dataSource={menus}
-            rowKey="menu_id"
-            loading={matrixLoading}
-            pagination={false}
-            scroll={{ x: 700, y: 'calc(100vh - 340px)' }}
-            size="small"
-            bordered
-          />
-        )}
-      </Card>
+          )}
+        </div>
+        <div className="p-6">
+          {!selectedRoleCd ? (
+            <div className="text-center py-12 text-gray-400">
+              좌측에서 역할을 선택해주세요.
+            </div>
+          ) : (
+            <Table
+              columns={matrixColumns}
+              dataSource={menus}
+              rowKey="menu_id"
+              loading={matrixLoading}
+              scrollX={700}
+            />
+          )}
+        </div>
+      </div>
 
       {/* 등록/수정 모달 */}
       <FormModal<RoleFormValues>
@@ -499,42 +476,54 @@ export default function RolesPage() {
       >
         {(form, mode) => (
           <>
-            <Form.Item
-              name="role_cd"
-              label="역할코드"
-              rules={[
-                { required: true, message: '역할코드를 입력하세요.' },
-                { pattern: /^[A-Z_]+$/, message: '영문 대문자와 _만 사용 가능합니다.' },
-              ]}
-            >
+            <FormField label="역할코드" required>
               <Input
+                name="role_cd"
                 placeholder="예: SYS_ADMIN"
                 disabled={mode === 'edit'}
                 maxLength={30}
+                required
+                pattern="^[A-Z_]+$"
+                title="영문 대문자와 _만 사용 가능합니다."
+                value={(form.getFieldsValue().role_cd as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ role_cd: e.target.value } as Partial<RoleFormValues>)}
               />
-            </Form.Item>
+            </FormField>
 
-            <Form.Item
-              name="role_nm"
-              label="역할명"
-              rules={[{ required: true, message: '역할명을 입력하세요.' }]}
-            >
-              <Input placeholder="역할명" maxLength={50} />
-            </Form.Item>
+            <FormField label="역할명" required>
+              <Input
+                name="role_nm"
+                placeholder="역할명"
+                maxLength={50}
+                required
+                value={(form.getFieldsValue().role_nm as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ role_nm: e.target.value } as Partial<RoleFormValues>)}
+              />
+            </FormField>
 
-            <Form.Item name="role_desc" label="설명">
-              <Input.TextArea placeholder="역할 설명" maxLength={200} rows={3} />
-            </Form.Item>
+            <FormField label="설명">
+              <Textarea
+                name="role_desc"
+                placeholder="역할 설명"
+                maxLength={200}
+                rows={3}
+                value={(form.getFieldsValue().role_desc as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ role_desc: e.target.value } as Partial<RoleFormValues>)}
+              />
+            </FormField>
 
             {mode === 'edit' && (
-              <Form.Item name="use_yn" label="사용여부">
+              <FormField label="사용여부">
                 <Select
+                  name="use_yn"
+                  value={(form.getFieldsValue().use_yn as string) ?? ''}
+                  onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<RoleFormValues>)}
                   options={[
                     { label: '사용', value: 'Y' },
                     { label: '미사용', value: 'N' },
                   ]}
                 />
-              </Form.Item>
+              </FormField>
             )}
           </>
         )}
@@ -544,17 +533,19 @@ export default function RolesPage() {
       <Modal
         open={!!deleteTarget}
         title="역할 삭제"
-        onOk={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-        okText="삭제"
-        cancelText="취소"
-        okButtonProps={{ danger: true }}
+        onClose={() => setDeleteTarget(null)}
+        footer={
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setDeleteTarget(null)}>취소</Button>
+            <Button variant="danger" onClick={handleDelete}>삭제</Button>
+          </div>
+        }
       >
         <p>
           <strong>{deleteTarget?.role_nm}</strong> ({deleteTarget?.role_cd}) 역할을 삭제하시겠습니까?
         </p>
         {deleteTarget?._count && deleteTarget._count.users > 0 && (
-          <p style={{ color: '#ff4d4f', fontSize: 13 }}>
+          <p className="text-red-500 text-[13px]">
             ※ 해당 역할에 {deleteTarget._count.users}명의 사용자가 배정되어 있어 삭제가 거부될 수 있습니다.
           </p>
         )}

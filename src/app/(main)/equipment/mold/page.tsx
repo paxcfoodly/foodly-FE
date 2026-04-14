@@ -1,32 +1,20 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Button,
-  Space,
-  Tag,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Table,
-  message,
-  Popconfirm,
-} from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  HistoryOutlined,
-} from '@ant-design/icons';
-import type { TablePaginationConfig } from 'antd/es/table';
-import type { SorterResult } from 'antd/es/table/interface';
+import { Plus, Pencil, Trash2, History } from 'lucide-react';
+import { Button, Tag } from '@/components/ui';
+import toast from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm';
 import PermissionButton from '@/components/auth/PermissionButton';
-import FormModal, { type FormModalMode } from '@/components/common/FormModal';
+import FormModal, { type FormModalMode, type FormHandle } from '@/components/common/FormModal';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
+import DataGrid from '@/components/common/DataGrid';
 import ExcelUploadButton from '@/components/common/ExcelUploadButton';
 import ExcelDownloadButton, { type ExcelColumn } from '@/components/common/ExcelDownloadButton';
 import DataHistoryDrawer from '@/components/common/DataHistoryDrawer';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import FormField from '@/components/ui/FormField';
 import apiClient from '@/lib/apiClient';
 import type { PaginatedResponse } from '@/types';
 import dayjs from 'dayjs';
@@ -151,7 +139,7 @@ export default function MoldMasterPage() {
           setPagination({ page: body.pagination.page, pageSize: body.pagination.pageSize, total: body.pagination.total });
         }
       } catch (err: any) {
-        message.error(err?.response?.data?.message ?? '금형 목록 조회에 실패했습니다.');
+        toast.error(err?.response?.data?.message ?? '금형 목록 조회에 실패했습니다.');
       } finally {
         setLoading(false);
       }
@@ -180,26 +168,21 @@ export default function MoldMasterPage() {
     fetchItems(1, pagination.pageSize, sortField, sortOrder, {});
   }, [fetchItems, pagination.pageSize, sortField, sortOrder]);
 
-  const handleTableChange = useCallback(
-    (
-      paginationConfig: TablePaginationConfig,
-      _filters: Record<string, unknown>,
-      sorter: SorterResult<MoldRow> | SorterResult<MoldRow>[],
-    ) => {
-      const newPage = paginationConfig.current ?? 1;
-      const newPageSize = paginationConfig.pageSize ?? 20;
-      let newSortField: string | undefined;
-      let newSortOrder: 'asc' | 'desc' | undefined;
-      if (!Array.isArray(sorter) && sorter.field && sorter.order) {
-        newSortField = sorter.field as string;
-        newSortOrder = sorter.order === 'ascend' ? 'asc' : 'desc';
-      }
-      setSortField(newSortField);
-      setSortOrder(newSortOrder);
+  const handlePageChange = useCallback(
+    (newPage: number, newPageSize: number) => {
       setPagination((prev) => ({ ...prev, page: newPage, pageSize: newPageSize }));
-      fetchItems(newPage, newPageSize, newSortField, newSortOrder, filters);
+      fetchItems(newPage, newPageSize, sortField, sortOrder, filters);
     },
-    [fetchItems, filters],
+    [fetchItems, sortField, sortOrder, filters],
+  );
+
+  const handleSortChange = useCallback(
+    (field: string, order: 'asc' | 'desc') => {
+      setSortField(field || undefined);
+      setSortOrder(field ? order : undefined);
+      fetchItems(pagination.page, pagination.pageSize, field || undefined, field ? order : undefined, filters);
+    },
+    [fetchItems, pagination.page, pagination.pageSize, filters],
   );
 
   const handleCreate = useCallback(() => {
@@ -239,14 +222,23 @@ export default function MoldMasterPage() {
   );
 
   const handleDelete = useCallback(
-    async (record: MoldRow) => {
-      try {
-        await apiClient.delete(`/v1/molds/${record.mold_cd}`);
-        message.success('금형이 삭제되었습니다.');
-        fetchItems(pagination.page, pagination.pageSize, sortField, sortOrder, filters);
-      } catch (err: any) {
-        message.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
-      }
+    (record: MoldRow) => {
+      confirm({
+        title: '금형을 삭제하시겠습니까?',
+        content: '다른 데이터에서 참조 중인 경우 삭제가 거부됩니다.',
+        okText: '삭제',
+        cancelText: '취소',
+        danger: true,
+        onOk: async () => {
+          try {
+            await apiClient.delete(`/v1/molds/${record.mold_cd}`);
+            toast.success('금형이 삭제되었습니다.');
+            fetchItems(pagination.page, pagination.pageSize, sortField, sortOrder, filters);
+          } catch (err: any) {
+            toast.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
+          }
+        },
+      });
     },
     [fetchItems, pagination.page, pagination.pageSize, sortField, sortOrder, filters],
   );
@@ -300,7 +292,7 @@ export default function MoldMasterPage() {
         width: 80,
         align: 'center' as const,
         render: (val: unknown) => (
-          <Tag color={(val as string) === 'Y' ? 'green' : 'default'}>
+          <Tag color={(val as string) === 'Y' ? 'green' : 'gray'}>
             {(val as string) === 'Y' ? '사용' : '미사용'}
           </Tag>
         ),
@@ -317,15 +309,12 @@ export default function MoldMasterPage() {
         dataIndex: '_action',
         width: 130,
         align: 'center' as const,
-        fixed: 'right' as const,
         render: (_: unknown, record: MoldRow) => (
-          <Space size={4}>
-            <PermissionButton action="update" menuUrl={MENU_URL} fallback="hide" size="small" type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)}>{''}</PermissionButton>
-            <Popconfirm title="금형을 삭제하시겠습니까?" description="다른 데이터에서 참조 중인 경우 삭제가 거부됩니다." onConfirm={() => handleDelete(record)} okText="삭제" cancelText="취소">
-              <PermissionButton action="delete" menuUrl={MENU_URL} fallback="hide" size="small" type="text" danger icon={<DeleteOutlined />}>{''}</PermissionButton>
-            </Popconfirm>
-            <Button size="small" type="text" icon={<HistoryOutlined />} onClick={() => handleHistory(record)} />
-          </Space>
+          <div className="flex items-center justify-center gap-1">
+            <PermissionButton action="update" menuUrl={MENU_URL} fallback="hide" size="small" variant="ghost" icon={<Pencil className="w-4 h-4" />} onClick={() => handleEdit(record)}>{''}</PermissionButton>
+            <PermissionButton action="delete" menuUrl={MENU_URL} fallback="hide" size="small" variant="danger" icon={<Trash2 className="w-4 h-4" />} onClick={() => handleDelete(record)}>{''}</PermissionButton>
+            <Button size="small" variant="ghost" icon={<History className="w-4 h-4" />} onClick={() => handleHistory(record)} />
+          </div>
         ),
       },
     ],
@@ -341,35 +330,32 @@ export default function MoldMasterPage() {
         onReset={handleSearchReset}
         loading={loading}
         extraButtons={
-          <Space>
+          <div className="flex items-center gap-2">
             <ExcelUploadButton uploadUrl="/v1/molds/import" onComplete={() => fetchItems(pagination.page, pagination.pageSize, sortField, sortOrder, filters)} />
             <ExcelDownloadButton filename="금형목록" columns={EXCEL_COLUMNS} data={fetchExcelData} />
-          </Space>
+          </div>
         }
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ color: '#666', fontSize: 13 }}>총 <strong>{pagination.total.toLocaleString()}</strong>건</span>
-        <PermissionButton action="create" menuUrl={MENU_URL} type="primary" icon={<PlusOutlined />} onClick={handleCreate}>금형 등록</PermissionButton>
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-gray-500 text-sm">총 <strong>{pagination.total.toLocaleString()}</strong>건</span>
+        <PermissionButton action="create" menuUrl={MENU_URL} variant="primary" icon={<Plus className="w-4 h-4" />} onClick={handleCreate}>금형 등록</PermissionButton>
       </div>
 
-      <Table<MoldRow>
+      <DataGrid<MoldRow>
         columns={columns}
         dataSource={items}
         rowKey="mold_cd"
         loading={loading}
+        page={pagination.page}
+        pageSize={pagination.pageSize}
+        total={pagination.total}
+        onPageChange={handlePageChange}
+        sortBy={sortField}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        scrollX={1100}
         size="small"
-        scroll={{ x: 1100 }}
-        pagination={{
-          current: pagination.page,
-          pageSize: pagination.pageSize,
-          total: pagination.total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
-          showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}건`,
-        }}
-        onChange={handleTableChange as any}
       />
 
       <FormModal<MoldFormValues>
@@ -383,25 +369,65 @@ export default function MoldMasterPage() {
       >
         {(form, mode) => (
           <>
-            <Form.Item name="mold_cd" label="금형코드" rules={[{ required: true, message: '금형코드를 입력하세요.' }, { max: 30, message: '최대 30자까지 입력 가능합니다.' }]}>
-              <Input placeholder="금형코드 입력" disabled={mode === 'edit'} maxLength={30} />
-            </Form.Item>
-            <Form.Item name="mold_nm" label="금형명" rules={[{ required: true, message: '금형명을 입력하세요.' }, { max: 200, message: '최대 200자까지 입력 가능합니다.' }]}>
-              <Input placeholder="금형명 입력" maxLength={200} />
-            </Form.Item>
-            <Form.Item name="item_cd" label="적용품목">
-              <Select placeholder="품목 선택" options={itemOptions} allowClear showSearch optionFilterProp="label" />
-            </Form.Item>
-            <Form.Item name="warranty_shots" label="보증타수" rules={[{ type: 'number', min: 0, message: '0 이상의 값을 입력하세요.' }]}>
-              <InputNumber placeholder="보증타수" min={0} style={{ width: '100%' }} precision={0} />
-            </Form.Item>
-            <Form.Item name="current_shots" label="현재타수" rules={[{ type: 'number', min: 0, message: '0 이상의 값을 입력하세요.' }]}>
-              <InputNumber placeholder="현재타수" min={0} style={{ width: '100%' }} precision={0} />
-            </Form.Item>
+            <FormField label="금형코드" required>
+              <Input
+                name="mold_cd"
+                placeholder="금형코드 입력"
+                disabled={mode === 'edit'}
+                maxLength={30}
+                required
+                value={(form.getFieldsValue().mold_cd as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ mold_cd: e.target.value } as Partial<MoldFormValues>)}
+              />
+            </FormField>
+            <FormField label="금형명" required>
+              <Input
+                name="mold_nm"
+                placeholder="금형명 입력"
+                maxLength={200}
+                required
+                value={(form.getFieldsValue().mold_nm as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ mold_nm: e.target.value } as Partial<MoldFormValues>)}
+              />
+            </FormField>
+            <FormField label="적용품목">
+              <Select
+                placeholder="품목 선택"
+                options={itemOptions}
+                value={(form.getFieldsValue().item_cd as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ item_cd: e.target.value } as Partial<MoldFormValues>)}
+              />
+            </FormField>
+            <FormField label="보증타수">
+              <input
+                type="number"
+                name="warranty_shots"
+                placeholder="보증타수"
+                min={0}
+                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                value={form.getFieldsValue().warranty_shots ?? ''}
+                onChange={(e) => form.setFieldsValue({ warranty_shots: e.target.value ? Number(e.target.value) : undefined } as Partial<MoldFormValues>)}
+              />
+            </FormField>
+            <FormField label="현재타수">
+              <input
+                type="number"
+                name="current_shots"
+                placeholder="현재타수"
+                min={0}
+                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                value={form.getFieldsValue().current_shots ?? ''}
+                onChange={(e) => form.setFieldsValue({ current_shots: e.target.value ? Number(e.target.value) : undefined } as Partial<MoldFormValues>)}
+              />
+            </FormField>
             {mode === 'edit' && (
-              <Form.Item name="use_yn" label="사용여부">
-                <Select options={USE_YN_OPTIONS} />
-              </Form.Item>
+              <FormField label="사용여부">
+                <Select
+                  options={USE_YN_OPTIONS}
+                  value={(form.getFieldsValue().use_yn as string) ?? ''}
+                  onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<MoldFormValues>)}
+                />
+              </FormField>
             )}
           </>
         )}

@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Card, DatePicker, Button, Space, Badge, Typography } from 'antd';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Search, RotateCcw } from 'lucide-react';
 import dayjs, { type Dayjs } from 'dayjs';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
 import type { DataGridColumn } from '@/components/common/DataGrid';
 import DataGrid from '@/components/common/DataGrid';
 import StatusTogglePopover from '@/components/equipment/StatusTogglePopover';
 import StatusTimelineChart from '@/components/equipment/StatusTimelineChart';
 import apiClient from '@/lib/apiClient';
-
-const { RangePicker } = DatePicker;
 
 const STATUS_COLORS: Record<string, string> = {
   RUN: '#52c41a',
@@ -24,6 +23,13 @@ const STATUS_LABELS: Record<string, string> = {
   IDLE: '비가동',
   DOWN: '고장',
   SETUP: '점검',
+};
+
+const STATUS_BADGE: Record<string, 'success' | 'warning' | 'error' | 'processing' | 'default'> = {
+  RUN: 'success',
+  IDLE: 'warning',
+  DOWN: 'error',
+  SETUP: 'warning',
 };
 
 interface EquipStatus {
@@ -59,7 +65,8 @@ interface StatusHistoryRow {
 
 export default function EquipmentOperationPage() {
   const today = dayjs();
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([today.startOf('day'), today.endOf('day')]);
+  const [startDate, setStartDate] = useState(today.format('YYYY-MM-DD'));
+  const [endDate, setEndDate] = useState(today.format('YYYY-MM-DD'));
   const [equipList, setEquipList] = useState<EquipmentRow[]>([]);
   const [equipLoading, setEquipLoading] = useState(false);
   const [selectedEquip, setSelectedEquip] = useState<EquipmentRow | null>(null);
@@ -68,9 +75,6 @@ export default function EquipmentOperationPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [total, setTotal] = useState<number | undefined>(undefined);
-
-  const startDate = dateRange[0].format('YYYY-MM-DD');
-  const endDate = dateRange[1].format('YYYY-MM-DD');
 
   const fetchEquipList = useCallback(async () => {
     setEquipLoading(true);
@@ -113,7 +117,8 @@ export default function EquipmentOperationPage() {
   };
 
   const handleReset = () => {
-    setDateRange([today.startOf('day'), today.endOf('day')]);
+    setStartDate(today.format('YYYY-MM-DD'));
+    setEndDate(today.format('YYYY-MM-DD'));
     setPage(1);
     setEquipList([]);
     setSelectedEquip(null);
@@ -134,10 +139,10 @@ export default function EquipmentOperationPage() {
       width: 100,
       render: (_, record) => {
         const current = record.equip_statuses?.[0];
-        if (!current) return <Badge color="#d9d9d9" text="-" />;
+        if (!current) return <Badge status="default" text="-" />;
         return (
           <Badge
-            color={STATUS_COLORS[current.status_type] ?? '#d9d9d9'}
+            status={STATUS_BADGE[current.status_type] ?? 'default'}
             text={STATUS_LABELS[current.status_type] ?? current.status_type}
           />
         );
@@ -184,7 +189,7 @@ export default function EquipmentOperationPage() {
       width: 100,
       render: (val) => {
         const v = val as string;
-        return <Badge color={STATUS_COLORS[v] ?? '#d9d9d9'} text={STATUS_LABELS[v] ?? v} />;
+        return <Badge status={STATUS_BADGE[v] ?? 'default'} text={STATUS_LABELS[v] ?? v} />;
       },
     },
     {
@@ -210,34 +215,37 @@ export default function EquipmentOperationPage() {
   ];
 
   return (
-    <div style={{ padding: '0 0 24px' }}>
-      <Typography.Title level={4} style={{ marginBottom: 16 }}>
-        설비가동관리
-      </Typography.Title>
+    <div className="pb-6">
+      <h4 className="text-lg font-semibold mb-4">설비가동관리</h4>
 
       {/* Filter bar */}
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Space wrap>
-          <span>조회 기간:</span>
-          <RangePicker
-            value={dateRange}
-            onChange={(vals) => {
-              if (vals && vals[0] && vals[1]) {
-                setDateRange([vals[0], vals[1]]);
-              }
-            }}
+      <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm">조회 기간:</span>
+          <input
+            type="date"
+            className="h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
           />
-          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+          <span className="text-gray-400 text-xs">~</span>
+          <input
+            type="date"
+            className="h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+          <Button variant="primary" icon={<Search className="w-4 h-4" />} onClick={handleSearch}>
             검색
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={handleReset}>
+          <Button icon={<RotateCcw className="w-4 h-4" />} onClick={handleReset}>
             초기화
           </Button>
-        </Space>
-      </Card>
+        </div>
+      </div>
 
       {/* Equipment list */}
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
         <DataGrid<EquipmentRow>
           columns={equipColumns}
           dataSource={equipList}
@@ -261,15 +269,15 @@ export default function EquipmentOperationPage() {
             },
           })}
         />
-      </Card>
+      </div>
 
       {/* Status history panel */}
       {selectedEquip && (
-        <Card
-          size="small"
-          title={`${selectedEquip.equip_nm} (${selectedEquip.equip_cd}) 상태 이력`}
-        >
-          <div style={{ marginBottom: 12 }}>
+        <div className="bg-white rounded-xl p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-gray-900 mb-3">
+            {selectedEquip.equip_nm} ({selectedEquip.equip_cd}) 상태 이력
+          </h3>
+          <div className="mb-3">
             <StatusTimelineChart
               equipCd={selectedEquip.equip_cd}
               equipNm={selectedEquip.equip_nm}
@@ -285,7 +293,7 @@ export default function EquipmentOperationPage() {
             emptyText="이 설비의 상태 이력이 없습니다. 설비 상태를 변경하면 이력이 자동으로 기록됩니다."
             scrollX={800}
           />
-        </Card>
+        </div>
       )}
     </div>
   );

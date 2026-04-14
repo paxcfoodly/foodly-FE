@@ -1,24 +1,16 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Button,
-  DatePicker,
-  Divider,
-  Form,
-  Input,
-  InputNumber,
-  List,
-  Modal,
-  Radio,
-  Select,
-  Space,
-  Tooltip,
-  Typography,
-  message,
-} from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Trash2, Plus } from 'lucide-react';
 import dayjs from 'dayjs';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import FormField from '@/components/ui/FormField';
+import Tooltip from '@/components/ui/Tooltip';
+import toast from '@/components/ui/toast';
 import CommonCodeSelect from '@/components/common/CommonCodeSelect';
 import FileUpload from '@/components/common/FileUpload';
 import apiClient from '@/lib/apiClient';
@@ -63,8 +55,10 @@ export default function MaintResultFormModal({
   onOk,
   onCancel,
 }: MaintResultFormModalProps) {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+
+  /* Form state */
+  const [formValues, setFormValues] = useState<Record<string, unknown>>({});
 
   /* Checklist state */
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
@@ -118,21 +112,20 @@ export default function MaintResultFormModal({
       }));
       setChecklistItems(items);
 
-      form.setFieldsValue({
+      setFormValues({
         equip_cd: plan.equip_cd,
         maint_type_cd: plan.maint_type_cd,
-        work_dt: dayjs(),
+        work_dt: dayjs().format('YYYY-MM-DD'),
         cost: undefined,
         memo: '',
       });
     } else {
       setChecklistItems([]);
-      form.resetFields();
-      form.setFieldValue('work_dt', dayjs());
+      setFormValues({ work_dt: dayjs().format('YYYY-MM-DD') });
     }
 
     setParts([]);
-  }, [open, plan, form]);
+  }, [open, plan]);
 
   /* ── Check if all checklist items are answered ── */
   const allChecked = useMemo(() => {
@@ -175,26 +168,33 @@ export default function MaintResultFormModal({
   /* ── Submit ───────────────────────────────────── */
   const handleOk = useCallback(async () => {
     if (!allChecked) {
-      message.warning('모든 점검항목을 체크한 후 저장할 수 있습니다.');
+      toast.warning('모든 점검항목을 체크한 후 저장할 수 있습니다.');
+      return;
+    }
+
+    if (!formValues.work_dt) {
+      toast.warning('작업일을 선택해주세요.');
+      return;
+    }
+
+    if (!plan?.equip_cd && !formValues.equip_cd) {
+      toast.warning('설비를 선택해주세요.');
       return;
     }
 
     try {
-      const values = await form.validateFields();
       setLoading(true);
 
       const validParts = parts.filter((p) => p.part_nm.trim() !== '');
 
       const body = {
-        equip_cd: values.equip_cd ?? plan?.equip_cd,
+        equip_cd: formValues.equip_cd ?? plan?.equip_cd,
         maint_plan_id: plan?.maint_plan_id,
-        maint_type_cd: values.maint_type_cd,
-        work_dt: values.work_dt
-          ? (values.work_dt as dayjs.Dayjs).format('YYYY-MM-DD')
-          : dayjs().format('YYYY-MM-DD'),
-        worker_id: values.worker_id,
-        cost: values.cost,
-        memo: values.memo,
+        maint_type_cd: formValues.maint_type_cd,
+        work_dt: formValues.work_dt,
+        worker_id: formValues.worker_id,
+        cost: formValues.cost,
+        memo: formValues.memo,
         replaced_parts: validParts.map((p) => ({
           part_nm: p.part_nm,
           qty: p.qty ?? 1,
@@ -214,8 +214,8 @@ export default function MaintResultFormModal({
         setCreatedResultId(String(resultId));
       }
 
-      message.success('보전이력이 등록되었습니다. 다음 점검일이 자동으로 갱신되었습니다.');
-      form.resetFields();
+      toast.success('보전이력이 등록되었습니다. 다음 점검일이 자동으로 갱신되었습니다.');
+      setFormValues({});
       setChecklistItems([]);
       setParts([]);
       onOk();
@@ -225,20 +225,20 @@ export default function MaintResultFormModal({
         response?: { data?: { message?: string } };
       };
       if (axiosErr?.errorFields) return;
-      message.error(axiosErr?.response?.data?.message ?? '저장 중 오류가 발생했습니다.');
+      toast.error(axiosErr?.response?.data?.message ?? '저장 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
-  }, [allChecked, form, plan, parts, checklistItems, onOk]);
+  }, [allChecked, formValues, plan, parts, checklistItems, onOk]);
 
   /* ── Cancel ───────────────────────────────────── */
   const handleCancel = useCallback(() => {
-    form.resetFields();
+    setFormValues({});
     setChecklistItems([]);
     setParts([]);
     setCreatedResultId(undefined);
     onCancel();
-  }, [form, onCancel]);
+  }, [onCancel]);
 
   const hasPlanEquip = !!plan?.equip_cd;
 
@@ -247,230 +247,213 @@ export default function MaintResultFormModal({
       open={open}
       title="보전이력 등록"
       width={760}
-      destroyOnClose
       maskClosable={false}
+      onClose={handleCancel}
       footer={
-        <Space>
+        <div className="flex items-center gap-2">
           <Button onClick={handleCancel}>취소</Button>
           <Button
-            type="primary"
+            variant="primary"
             loading={loading}
             onClick={handleOk}
             disabled={!allChecked && checklistItems.length > 0}
           >
             보전이력 저장
           </Button>
-        </Space>
+        </div>
       }
-      onCancel={handleCancel}
     >
-      <Form
-        form={form}
-        layout="horizontal"
-        labelCol={{ span: 6 }}
-        wrapperCol={{ span: 18 }}
-        autoComplete="off"
-      >
+      <div className="space-y-4">
         {/* Section: Basic info */}
-        <Divider titlePlacement="left" plain style={{ marginTop: 0 }}>
-          기본 정보
-        </Divider>
+        <div className="border-b border-gray-100 pb-1 mb-3">
+          <span className="text-sm font-medium text-gray-500">기본 정보</span>
+        </div>
 
         {/* Equipment — readonly if from plan */}
         {hasPlanEquip ? (
-          <Form.Item label="설비">
-            <Typography.Text>
+          <FormField label="설비" layout="horizontal">
+            <span className="text-sm text-gray-700">
               {(plan?.equipment as { equip_nm?: string } | undefined)?.equip_nm ??
                 String(plan?.equip_cd ?? '')}
-            </Typography.Text>
-            <Form.Item name="equip_cd" hidden initialValue={plan?.equip_cd}>
-              <Input />
-            </Form.Item>
-          </Form.Item>
+            </span>
+          </FormField>
         ) : (
-          <Form.Item
-            name="equip_cd"
-            label="설비"
-            rules={[{ required: true, message: '설비를 선택해주세요.' }]}
-          >
+          <FormField label="설비" required layout="horizontal">
             <Select
-              showSearch
               placeholder="설비 선택"
-              optionFilterProp="label"
-              allowClear
+              value={(formValues.equip_cd as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, equip_cd: e.target.value }))}
               options={equipments.map((e) => ({
                 label: e.equip_nm,
                 value: e.equip_cd,
               }))}
             />
-          </Form.Item>
+          </FormField>
         )}
 
         {/* Maintenance type */}
-        <Form.Item name="maint_type_cd" label="보전유형">
-          <CommonCodeSelect groupCd="MAINT_TYPE" placeholder="보전유형 선택" allowClear />
-        </Form.Item>
+        <FormField label="보전유형" layout="horizontal">
+          <CommonCodeSelect
+            groupCd="MAINT_TYPE"
+            placeholder="보전유형 선택"
+            showAll
+            value={(formValues.maint_type_cd as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, maint_type_cd: e.target.value }))}
+          />
+        </FormField>
 
         {/* Work date */}
-        <Form.Item
-          name="work_dt"
-          label="작업일"
-          rules={[{ required: true, message: '작업일을 선택해주세요.' }]}
-        >
-          <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
-        </Form.Item>
+        <FormField label="작업일" required layout="horizontal">
+          <input
+            type="date"
+            className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+            value={(formValues.work_dt as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, work_dt: e.target.value }))}
+            required
+          />
+        </FormField>
 
         {/* Worker */}
-        <Form.Item name="worker_id" label="작업자">
+        <FormField label="작업자" layout="horizontal">
           <Select
-            showSearch
             placeholder="작업자 선택"
-            optionFilterProp="label"
-            allowClear
+            value={(formValues.worker_id as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, worker_id: e.target.value ? Number(e.target.value) : undefined }))}
             options={workers.map((w) => ({
               label: w.worker_nm,
               value: w.worker_id,
             }))}
           />
-        </Form.Item>
+        </FormField>
 
         {/* Cost */}
-        <Form.Item name="cost" label="비용">
-          <InputNumber
-            style={{ width: '100%' }}
+        <FormField label="비용" layout="horizontal">
+          <input
+            type="number"
+            className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
             placeholder="보전 비용"
             min={0}
-            precision={2}
-            formatter={(val) =>
-              val ? String(val).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''
-            }
+            value={(formValues.cost as number) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, cost: e.target.value ? Number(e.target.value) : undefined }))}
           />
-        </Form.Item>
+        </FormField>
 
         {/* Memo */}
-        <Form.Item name="memo" label="메모">
-          <Input.TextArea rows={2} placeholder="보전 내용 메모" />
-        </Form.Item>
+        <FormField label="메모" layout="horizontal">
+          <Textarea
+            rows={2}
+            placeholder="보전 내용 메모"
+            value={(formValues.memo as string) ?? ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, memo: e.target.value }))}
+          />
+        </FormField>
 
-        {/* Section: Checklist results — per D-10 */}
+        {/* Section: Checklist results */}
         {checklistItems.length > 0 && (
           <>
-            <Divider titlePlacement="left" plain>
-              점검항목 체크 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                (모든 항목 필수)
-              </Typography.Text>
-            </Divider>
+            <div className="border-b border-gray-100 pb-1 mb-3 mt-6">
+              <span className="text-sm font-medium text-gray-500">
+                점검항목 체크 <span className="text-xs text-gray-400">(모든 항목 필수)</span>
+              </span>
+            </div>
 
             {!allChecked && (
-              <Typography.Text type="warning" style={{ display: 'block', marginBottom: 8 }}>
+              <p className="text-sm text-yellow-600 mb-2">
                 모든 점검항목을 체크한 후 저장할 수 있습니다.
-              </Typography.Text>
+              </p>
             )}
 
-            <List
-              size="small"
-              dataSource={checklistItems}
-              renderItem={(item, index) => (
-                <List.Item
-                  style={{
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    paddingLeft: 8,
-                  }}
-                >
-                  <div style={{ marginBottom: 4 }}>
-                    <Typography.Text strong>
+            <div className="space-y-3">
+              {checklistItems.map((item, index) => (
+                <div key={index} className="pl-2 border-l-2 border-gray-200 py-1">
+                  <div className="mb-1">
+                    <span className="font-medium text-sm">
                       {index + 1}. {item.check_item}
-                    </Typography.Text>
+                    </span>
                     {item.check_std && (
-                      <Typography.Text
-                        type="secondary"
-                        style={{ marginLeft: 8, fontSize: 12 }}
-                      >
+                      <span className="text-xs text-gray-400 ml-2">
                         기준: {item.check_std}
-                      </Typography.Text>
+                      </span>
                     )}
                   </div>
-                  <Radio.Group
-                    value={item.check_result}
-                    onChange={(e) =>
-                      handleCheckResultChange(index, e.target.value)
-                    }
-                  >
-                    <Radio value="OK">양호</Radio>
-                    <Radio value="ACTION_NEEDED">조치필요</Radio>
-                    <Radio value="REPLACED">교체</Radio>
-                  </Radio.Group>
-                </List.Item>
-              )}
-            />
+                  <div className="flex items-center gap-4">
+                    {(['OK', 'ACTION_NEEDED', 'REPLACED'] as const).map((val) => (
+                      <label key={val} className="inline-flex items-center gap-1.5 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name={`check_result_${index}`}
+                          value={val}
+                          checked={item.check_result === val}
+                          onChange={() => handleCheckResultChange(index, val)}
+                          className="accent-cyan-accent"
+                        />
+                        {val === 'OK' ? '양호' : val === 'ACTION_NEEDED' ? '조치필요' : '교체'}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </>
         )}
 
-        {/* Section: Replaced parts — per D-11 */}
-        <Divider titlePlacement="left" plain>
-          교체 부품
-        </Divider>
+        {/* Section: Replaced parts */}
+        <div className="border-b border-gray-100 pb-1 mb-3 mt-6">
+          <span className="text-sm font-medium text-gray-500">교체 부품</span>
+        </div>
 
         {parts.map((part, index) => (
-          <div
-            key={index}
-            style={{
-              display: 'flex',
-              gap: 8,
-              marginBottom: 8,
-              alignItems: 'center',
-            }}
-          >
+          <div key={index} className="flex gap-2 mb-2 items-center">
             <Input
               placeholder="부품명"
-              style={{ flex: 2 }}
+              className="flex-[2]"
               value={part.part_nm}
               onChange={(e) => updatePart(index, 'part_nm', e.target.value)}
             />
-            <InputNumber
+            <input
+              type="number"
+              className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
               placeholder="수량"
-              style={{ flex: 1 }}
               min={1}
-              value={part.qty}
-              onChange={(val) => updatePart(index, 'qty', val)}
+              value={part.qty ?? ''}
+              onChange={(e) => updatePart(index, 'qty', e.target.value ? Number(e.target.value) : null)}
             />
-            <InputNumber
+            <input
+              type="number"
+              className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
               placeholder="비용 (선택)"
-              style={{ flex: 1 }}
               min={0}
-              value={part.cost}
-              onChange={(val) => updatePart(index, 'cost', val)}
+              value={part.cost ?? ''}
+              onChange={(e) => updatePart(index, 'cost', e.target.value ? Number(e.target.value) : null)}
             />
             <Tooltip title="삭제">
               <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
+                variant="danger"
+                size="small"
+                icon={<Trash2 className="w-4 h-4" />}
                 aria-label="부품 행 삭제"
                 onClick={() => removePart(index)}
-                size="small"
               />
             </Tooltip>
           </div>
         ))}
 
         <Button
-          type="dashed"
+          variant="ghost"
           onClick={addPart}
-          icon={<PlusOutlined />}
+          icon={<Plus className="w-4 h-4" />}
           size="small"
-          style={{ marginBottom: 16 }}
+          className="mb-4"
         >
           + 부품 추가
         </Button>
 
-        {/* Section: Photo attachment — per D-12 */}
-        <Divider titlePlacement="left" plain>
-          사진 첨부
-        </Divider>
+        {/* Section: Photo attachment */}
+        <div className="border-b border-gray-100 pb-1 mb-3 mt-6">
+          <span className="text-sm font-medium text-gray-500">사진 첨부</span>
+        </div>
 
-        <Form.Item label="사진" wrapperCol={{ span: 18 }}>
+        <FormField label="사진" layout="horizontal">
           <FileUpload
             refTable="tb_maint_result"
             refId={createdResultId}
@@ -479,12 +462,12 @@ export default function MaintResultFormModal({
             listType="picture"
           />
           {!createdResultId && (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            <p className="text-xs text-gray-400 mt-1">
               저장 후 사진이 이력에 연결됩니다.
-            </Typography.Text>
+            </p>
           )}
-        </Form.Item>
-      </Form>
+        </FormField>
+      </div>
     </Modal>
   );
 }

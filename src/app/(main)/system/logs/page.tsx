@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Tag, Modal, Descriptions, message } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { Eye } from 'lucide-react';
+import Tag from '@/components/ui/Tag';
+import Modal from '@/components/ui/Modal';
+import toast from '@/components/ui/toast';
 import DataGrid, { type DataGridColumn } from '@/components/common/DataGrid';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
 import apiClient from '@/lib/apiClient';
@@ -29,7 +31,7 @@ const ACTION_COLORS: Record<string, string> = {
   UPDATE: 'blue',
   DELETE: 'red',
   LOGIN: 'purple',
-  LOGOUT: 'default',
+  LOGOUT: 'gray',
 };
 
 /* ── Component ─────────────────────────────────────── */
@@ -85,7 +87,7 @@ export default function AuditLogsPage() {
         setTotal(0);
       }
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '감사로그 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '감사로그 조회에 실패했습니다.');
       setDataSource([]);
     } finally {
       setLoading(false);
@@ -163,7 +165,7 @@ export default function AuditLogsPage() {
         align: 'center' as const,
         render: (val: unknown) => {
           const action = val as string;
-          return <Tag color={ACTION_COLORS[action] ?? 'default'}>{action}</Tag>;
+          return <Tag color={ACTION_COLORS[action] ?? 'gray'}>{action}</Tag>;
         },
       },
       {
@@ -191,9 +193,12 @@ export default function AuditLogsPage() {
         align: 'center' as const,
         fixed: 'right' as const,
         render: (_: unknown, record: AuditLogRow) => (
-          <a onClick={() => setDetailRecord(record)}>
-            <EyeOutlined /> 보기
-          </a>
+          <button
+            onClick={() => setDetailRecord(record)}
+            className="text-cyan-accent hover:underline text-sm inline-flex items-center gap-1"
+          >
+            <Eye className="w-4 h-4" /> 보기
+          </button>
         ),
       },
     ],
@@ -224,7 +229,7 @@ export default function AuditLogsPage() {
   /* ── JSON diff renderer ─── */
   const renderJsonDiff = useCallback(
     (oldVals: Record<string, unknown> | null, newVals: Record<string, unknown> | null) => {
-      if (!oldVals && !newVals) return <span style={{ color: '#999' }}>변경 데이터 없음</span>;
+      if (!oldVals && !newVals) return <span className="text-gray-400">변경 데이터 없음</span>;
 
       const allKeys = new Set([
         ...Object.keys(oldVals ?? {}),
@@ -232,12 +237,12 @@ export default function AuditLogsPage() {
       ]);
 
       return (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <table className="w-full border-collapse text-[13px]">
           <thead>
-            <tr style={{ borderBottom: '2px solid #f0f0f0' }}>
-              <th style={{ padding: '6px 8px', textAlign: 'left' }}>필드</th>
-              <th style={{ padding: '6px 8px', textAlign: 'left' }}>변경 전</th>
-              <th style={{ padding: '6px 8px', textAlign: 'left' }}>변경 후</th>
+            <tr className="border-b-2 border-gray-100">
+              <th className="px-2 py-1.5 text-left">필드</th>
+              <th className="px-2 py-1.5 text-left">변경 전</th>
+              <th className="px-2 py-1.5 text-left">변경 후</th>
             </tr>
           </thead>
           <tbody>
@@ -248,28 +253,13 @@ export default function AuditLogsPage() {
               return (
                 <tr
                   key={key}
-                  style={{
-                    borderBottom: '1px solid #f0f0f0',
-                    backgroundColor: changed ? '#fffbe6' : undefined,
-                  }}
+                  className={`border-b border-gray-100 ${changed ? 'bg-yellow-50' : ''}`}
                 >
-                  <td style={{ padding: '4px 8px', fontWeight: 500 }}>{key}</td>
-                  <td
-                    style={{
-                      padding: '4px 8px',
-                      color: changed ? '#ff4d4f' : '#666',
-                      wordBreak: 'break-all',
-                    }}
-                  >
+                  <td className="px-2 py-1 font-medium">{key}</td>
+                  <td className={`px-2 py-1 break-all ${changed ? 'text-red-500' : 'text-gray-500'}`}>
                     {oldVal !== undefined ? JSON.stringify(oldVal) : '-'}
                   </td>
-                  <td
-                    style={{
-                      padding: '4px 8px',
-                      color: changed ? '#52c41a' : '#666',
-                      wordBreak: 'break-all',
-                    }}
-                  >
+                  <td className={`px-2 py-1 break-all ${changed ? 'text-green-600' : 'text-gray-500'}`}>
                     {newVal !== undefined ? JSON.stringify(newVal) : '-'}
                   </td>
                 </tr>
@@ -284,7 +274,7 @@ export default function AuditLogsPage() {
 
   /* ── Render ─── */
   return (
-    <div style={{ padding: 0 }}>
+    <div>
       {/* 검색 영역 */}
       <SearchForm
         fields={searchFields}
@@ -314,39 +304,32 @@ export default function AuditLogsPage() {
         open={!!detailRecord}
         title={`감사로그 상세 (#${detailRecord?.log_id ?? ''})`}
         width={800}
-        onCancel={() => setDetailRecord(null)}
-        footer={null}
+        onClose={() => setDetailRecord(null)}
       >
         {detailRecord && (
           <>
-            <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="로그ID">{detailRecord.log_id}</Descriptions.Item>
-              <Descriptions.Item label="일시">
-                {new Date(detailRecord.create_dt).toLocaleString('ko-KR')}
-              </Descriptions.Item>
-              <Descriptions.Item label="사용자">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-4 text-sm border border-gray-100 rounded-lg p-4">
+              <div><span className="text-gray-400 font-medium">로그ID:</span> {detailRecord.log_id}</div>
+              <div><span className="text-gray-400 font-medium">일시:</span> {new Date(detailRecord.create_dt).toLocaleString('ko-KR')}</div>
+              <div>
+                <span className="text-gray-400 font-medium">사용자:</span>{' '}
                 {detailRecord.user
                   ? `${detailRecord.user.user_nm} (${detailRecord.user.login_id})`
                   : String(detailRecord.user_id ?? '-')}
-              </Descriptions.Item>
-              <Descriptions.Item label="액션">
-                <Tag color={ACTION_COLORS[detailRecord.action] ?? 'default'}>
+              </div>
+              <div>
+                <span className="text-gray-400 font-medium">액션:</span>{' '}
+                <Tag color={ACTION_COLORS[detailRecord.action] ?? 'gray'}>
                   {detailRecord.action}
                 </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="테이블">
-                {detailRecord.target_table ?? '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="대상ID">
-                {detailRecord.target_id ?? '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="IP" span={2}>
-                {detailRecord.ip_address ?? '-'}
-              </Descriptions.Item>
-            </Descriptions>
+              </div>
+              <div><span className="text-gray-400 font-medium">테이블:</span> {detailRecord.target_table ?? '-'}</div>
+              <div><span className="text-gray-400 font-medium">대상ID:</span> {detailRecord.target_id ?? '-'}</div>
+              <div className="col-span-2"><span className="text-gray-400 font-medium">IP:</span> {detailRecord.ip_address ?? '-'}</div>
+            </div>
 
-            <div style={{ fontWeight: 500, marginBottom: 8 }}>변경 데이터 비교</div>
-            <div style={{ border: '1px solid #f0f0f0', borderRadius: 4, overflow: 'auto', maxHeight: 400 }}>
+            <div className="font-medium mb-2">변경 데이터 비교</div>
+            <div className="border border-gray-100 rounded overflow-auto max-h-[400px]">
               {renderJsonDiff(detailRecord.old_values, detailRecord.new_values)}
             </div>
           </>

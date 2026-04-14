@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Card, Col, Row, Statistic } from 'antd';
 
 interface CpkDisplayProps {
   cp: number | null;
@@ -25,34 +24,28 @@ function formatCpk(value: number | null): string {
 export default function CpkDisplay({ cp, cpk, totalCount, subgroupCount }: CpkDisplayProps) {
   return (
     <div>
-      <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>공정능력 지수</div>
-      <Row gutter={[16, 16]}>
-        <Col span={12}>
-          <Card size="small" style={{ textAlign: 'center' }}>
-            <Statistic
-              title="Cp"
-              value={formatCpk(cp)}
-              valueStyle={{ color: getCpkColor(cp), fontSize: 28, fontWeight: 700 }}
-            />
-          </Card>
-        </Col>
-        <Col span={12}>
-          <Card size="small" style={{ textAlign: 'center' }}>
-            <Statistic
-              title="Cpk"
-              value={formatCpk(cpk)}
-              valueStyle={{ color: getCpkColor(cpk), fontSize: 28, fontWeight: 700 }}
-            />
-          </Card>
-        </Col>
-      </Row>
-      <div style={{ marginTop: 12, color: '#595959', fontSize: 13 }}>
-        <span style={{ marginRight: 16 }}>총 데이터: {totalCount}건</span>
+      <div className="font-semibold mb-2 text-sm">공정능력 지수</div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
+          <div className="text-sm text-gray-500 mb-1">Cp</div>
+          <div className="text-[28px] font-bold" style={{ color: getCpkColor(cp) }}>
+            {formatCpk(cp)}
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
+          <div className="text-sm text-gray-500 mb-1">Cpk</div>
+          <div className="text-[28px] font-bold" style={{ color: getCpkColor(cpk) }}>
+            {formatCpk(cpk)}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 text-gray-600 text-[13px]">
+        <span className="mr-4">총 데이터: {totalCount}건</span>
         <span>서브그룹: {subgroupCount}개</span>
       </div>
-      <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>
-        <span style={{ color: '#52c41a', marginRight: 8 }}>■ 우수 (≥1.33)</span>
-        <span style={{ color: '#faad14', marginRight: 8 }}>■ 보통 (1.00-1.32)</span>
+      <div className="mt-2 text-gray-400 text-xs">
+        <span className="mr-2" style={{ color: '#52c41a' }}>■ 우수 (≥1.33)</span>
+        <span className="mr-2" style={{ color: '#faad14' }}>■ 보통 (1.00-1.32)</span>
         <span style={{ color: '#ff4d4f' }}>■ 불량 (&lt;1.00)</span>
       </div>
     </div>

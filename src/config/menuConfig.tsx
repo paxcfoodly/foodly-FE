@@ -1,17 +1,17 @@
 import React from 'react';
 import {
-  DashboardOutlined,
-  DatabaseOutlined,
-  ScheduleOutlined,
-  FileTextOutlined,
-  CheckCircleOutlined,
-  ExperimentOutlined,
-  ToolOutlined,
-  InboxOutlined,
-  CarOutlined,
-  BarChartOutlined,
-  SettingOutlined,
-} from '@ant-design/icons';
+  LayoutDashboard,
+  Database,
+  CalendarDays,
+  FileText,
+  CheckCircle,
+  FlaskConical,
+  Wrench,
+  Inbox,
+  Truck,
+  BarChart3,
+  Settings,
+} from 'lucide-react';
 
 export interface MenuItem {
   id: string;
@@ -30,7 +30,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'dashboard',
     label: '대시보드',
-    icon: <DashboardOutlined />,
+    icon: <LayoutDashboard className="w-5 h-5" />,
     path: '/dashboard',
     permission: 'dashboard:read',
     children: [
@@ -43,7 +43,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'master',
     label: '기준정보',
-    icon: <DatabaseOutlined />,
+    icon: <Database className="w-5 h-5" />,
     path: '/master',
     permission: 'master:read',
     children: [
@@ -60,7 +60,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'plan',
     label: '생산계획',
-    icon: <ScheduleOutlined />,
+    icon: <CalendarDays className="w-5 h-5" />,
     path: '/plan',
     permission: 'plan:read',
     children: [
@@ -71,7 +71,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'work-order',
     label: '작업지시',
-    icon: <FileTextOutlined />,
+    icon: <FileText className="w-5 h-5" />,
     path: '/work-order',
     permission: 'work-order:read',
     children: [
@@ -82,7 +82,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'production',
     label: '생산실적',
-    icon: <CheckCircleOutlined />,
+    icon: <CheckCircle className="w-5 h-5" />,
     path: '/production',
     permission: 'production:read',
     children: [
@@ -94,7 +94,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'quality',
     label: '품질관리',
-    icon: <ExperimentOutlined />,
+    icon: <FlaskConical className="w-5 h-5" />,
     path: '/quality',
     permission: 'quality:read',
     children: [
@@ -108,7 +108,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'equipment',
     label: '설비보전',
-    icon: <ToolOutlined />,
+    icon: <Wrench className="w-5 h-5" />,
     path: '/equipment',
     permission: 'equipment:read',
     children: [
@@ -120,7 +120,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'inventory',
     label: '자재/재고',
-    icon: <InboxOutlined />,
+    icon: <Inbox className="w-5 h-5" />,
     path: '/inventory',
     permission: 'inventory:read',
     children: [
@@ -132,7 +132,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'shipment',
     label: '출하관리',
-    icon: <CarOutlined />,
+    icon: <Truck className="w-5 h-5" />,
     path: '/shipment',
     permission: 'shipment:read',
     children: [
@@ -143,7 +143,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'reports',
     label: '리포트',
-    icon: <BarChartOutlined />,
+    icon: <BarChart3 className="w-5 h-5" />,
     path: '/reports',
     permission: 'reports:read',
     children: [
@@ -157,7 +157,7 @@ export const menuConfig: MenuItem[] = [
   {
     id: 'system',
     label: '시스템관리',
-    icon: <SettingOutlined />,
+    icon: <Settings className="w-5 h-5" />,
     path: '/system',
     permission: 'system:admin',
     children: [
@@ -209,23 +209,3 @@ export function buildPathLabelMap(items: MenuItem[], map: Record<string, string>
 
 /** 세그먼트 → label flat map (최초 등록 우선) */
 export const pathLabelMap = buildPathLabelMap(menuConfig);
-
-/**
- * menuConfig → Ant Design Menu items 변환
- */
-export function toAntdMenuItems(items: MenuItem[]): Array<{
-  key: string;
-  icon?: React.ReactNode;
-  label: string;
-  children?: Array<{ key: string; label: string }>;
-}> {
-  return items.map((item) => ({
-    key: item.path,
-    icon: item.icon,
-    label: item.label,
-    children: item.children?.map((child) => ({
-      key: child.path,
-      label: child.label,
-    })),
-  }));
-}

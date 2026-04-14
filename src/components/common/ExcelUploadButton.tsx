@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
-import { Button, message, Modal, Typography, Space } from 'antd';
-import { UploadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { Upload, CheckCircle, XCircle } from 'lucide-react';
+import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
+import toast from '@/components/ui/toast';
 import apiClient from '@/lib/apiClient';
-
-const { Text } = Typography;
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -38,47 +38,9 @@ export default function ExcelUploadButton({
   disabled = false,
 }: ExcelUploadButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [resultModalOpen, setResultModalOpen] = useState(false);
+  const [uploadResult, setUploadResult] = useState<ExcelUploadResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const showResult = useCallback((result: ExcelUploadResult) => {
-    Modal.info({
-      title: '엑셀 업로드 결과',
-      width: 480,
-      content: (
-        <div style={{ marginTop: 12 }}>
-          <Space direction="vertical" size={4}>
-            <Text>
-              <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 4 }} />
-              성공: <strong>{result.successCount}건</strong>
-            </Text>
-            <Text>
-              <CloseCircleOutlined style={{ color: '#ff4d4f', marginRight: 4 }} />
-              실패: <strong>{result.errorCount}건</strong>
-            </Text>
-          </Space>
-          {result.errors && result.errors.length > 0 && (
-            <div
-              style={{
-                marginTop: 12,
-                maxHeight: 200,
-                overflow: 'auto',
-                background: '#fafafa',
-                padding: 8,
-                borderRadius: 4,
-                fontSize: 12,
-              }}
-            >
-              {result.errors.map((e, i) => (
-                <div key={i} style={{ color: '#ff4d4f' }}>
-                  행 {e.row}, {e.column}: {e.message}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ),
-    });
-  }, []);
 
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,16 +64,17 @@ export default function ExcelUploadButton({
           errorCount: 0,
         };
 
-        showResult(result);
+        setUploadResult(result);
+        setResultModalOpen(true);
         onComplete?.(result);
       } catch (err: any) {
         console.error('[ExcelUploadButton]', err);
-        message.error(err?.response?.data?.message ?? '엑셀 업로드에 실패했습니다.');
+        toast.error(err?.response?.data?.message ?? '엑셀 업로드에 실패했습니다.');
       } finally {
         setLoading(false);
       }
     },
-    [uploadUrl, onComplete, showResult],
+    [uploadUrl, onComplete],
   );
 
   const handleClick = useCallback(() => {
@@ -124,17 +87,54 @@ export default function ExcelUploadButton({
         ref={fileInputRef}
         type="file"
         accept={accept}
-        style={{ display: 'none' }}
+        className="hidden"
         onChange={handleFileChange}
       />
       <Button
-        icon={<UploadOutlined />}
+        icon={<Upload className="w-4 h-4" />}
         loading={loading}
         disabled={disabled}
         onClick={handleClick}
       >
         {label}
       </Button>
+
+      {/* Result Modal */}
+      <Modal
+        open={resultModalOpen}
+        onClose={() => setResultModalOpen(false)}
+        title="엑셀 업로드 결과"
+        width={480}
+        footer={
+          <Button variant="primary" onClick={() => setResultModalOpen(false)}>
+            확인
+          </Button>
+        }
+      >
+        {uploadResult && (
+          <div>
+            <div className="space-y-1">
+              <p className="text-sm text-gray-700 flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                성공: <strong>{uploadResult.successCount}건</strong>
+              </p>
+              <p className="text-sm text-gray-700 flex items-center gap-1.5">
+                <XCircle className="w-4 h-4 text-red-500" />
+                실패: <strong>{uploadResult.errorCount}건</strong>
+              </p>
+            </div>
+            {uploadResult.errors && uploadResult.errors.length > 0 && (
+              <div className="mt-3 max-h-[200px] overflow-auto bg-dark-700 p-2 rounded text-xs">
+                {uploadResult.errors.map((e, i) => (
+                  <div key={i} className="text-red-500">
+                    행 {e.row}, {e.column}: {e.message}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </>
   );
 }

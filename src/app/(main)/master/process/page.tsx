@@ -2,29 +2,23 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Button,
-  Space,
-  Tag,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Table,
-  Drawer,
-  message,
-  Popconfirm,
-  Typography,
-} from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  HistoryOutlined,
-  PartitionOutlined,
-  ToolOutlined,
-} from '@ant-design/icons';
-import type { TablePaginationConfig } from 'antd/es/table';
-import type { SorterResult } from 'antd/es/table/interface';
+  Plus,
+  Pencil,
+  Trash2,
+  History,
+  Wrench,
+  GitBranch,
+} from 'lucide-react';
+import Button from '@/components/ui/Button';
+import Tag from '@/components/ui/Tag';
+import Drawer from '@/components/ui/Drawer';
+import Table from '@/components/ui/Table';
+import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
+import toast from '@/components/ui/toast';
+import { confirm } from '@/components/ui/confirm';
+import FormField from '@/components/ui/FormField';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
 import FormModal, { type FormModalMode } from '@/components/common/FormModal';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
@@ -34,8 +28,6 @@ import DataHistoryDrawer from '@/components/common/DataHistoryDrawer';
 import apiClient from '@/lib/apiClient';
 import type { PaginatedResponse } from '@/types';
 import dayjs from 'dayjs';
-
-const { Title } = Typography;
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -72,6 +64,7 @@ interface RoutingRow {
   setup_time: string | number | null;
   use_yn: string;
   process: { process_nm: string };
+  [key: string]: unknown;
 }
 
 interface EquipMappingRow {
@@ -79,6 +72,7 @@ interface EquipMappingRow {
   process_cd: string;
   priority: number;
   equipment: { equip_nm: string; equip_type: string | null };
+  [key: string]: unknown;
 }
 
 const MENU_URL = '/master/process';
@@ -202,7 +196,7 @@ export default function ProcessMasterPage() {
           });
         }
       } catch (err: any) {
-        message.error(err?.response?.data?.message ?? '공정 목록 조회에 실패했습니다.');
+        toast.error(err?.response?.data?.message ?? '공정 목록 조회에 실패했습니다.');
       } finally {
         setLoading(false);
       }
@@ -231,27 +225,22 @@ export default function ProcessMasterPage() {
     fetchProcesses(1, pagination.pageSize, sortField, sortOrder, {});
   }, [fetchProcesses, pagination.pageSize, sortField, sortOrder]);
 
-  /* ── Table change ─── */
-  const handleTableChange = useCallback(
-    (
-      paginationConfig: TablePaginationConfig,
-      _filters: Record<string, unknown>,
-      sorter: SorterResult<ProcessRow> | SorterResult<ProcessRow>[],
-    ) => {
-      const newPage = paginationConfig.current ?? 1;
-      const newPageSize = paginationConfig.pageSize ?? 20;
-      let newSortField: string | undefined;
-      let newSortOrder: 'asc' | 'desc' | undefined;
-      if (!Array.isArray(sorter) && sorter.field && sorter.order) {
-        newSortField = sorter.field as string;
-        newSortOrder = sorter.order === 'ascend' ? 'asc' : 'desc';
-      }
-      setSortField(newSortField);
-      setSortOrder(newSortOrder);
-      setPagination((prev) => ({ ...prev, page: newPage, pageSize: newPageSize }));
-      fetchProcesses(newPage, newPageSize, newSortField, newSortOrder, filters);
+  /* ── Sort / Page change ─── */
+  const handleSortChange = useCallback(
+    (field: string, order: 'asc' | 'desc') => {
+      setSortField(field);
+      setSortOrder(order);
+      fetchProcesses(pagination.page, pagination.pageSize, field, order, filters);
     },
-    [fetchProcesses, filters],
+    [fetchProcesses, pagination.page, pagination.pageSize, filters],
+  );
+
+  const handlePageChange = useCallback(
+    (page: number, pageSize: number) => {
+      setPagination((prev) => ({ ...prev, page, pageSize }));
+      fetchProcesses(page, pageSize, sortField, sortOrder, filters);
+    },
+    [fetchProcesses, sortField, sortOrder, filters],
   );
 
   /* ── CRUD handlers ─── */
@@ -295,10 +284,10 @@ export default function ProcessMasterPage() {
     async (record: ProcessRow) => {
       try {
         await apiClient.delete(`/v1/processes/${record.process_cd}`);
-        message.success('공정이 삭제되었습니다.');
+        toast.success('공정이 삭제되었습니다.');
         fetchProcesses(pagination.page, pagination.pageSize, sortField, sortOrder, filters);
       } catch (err: any) {
-        message.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
+        toast.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
       }
     },
     [fetchProcesses, pagination.page, pagination.pageSize, sortField, sortOrder, filters],
@@ -338,7 +327,7 @@ export default function ProcessMasterPage() {
       setRoutings(res.data?.data ?? []);
       setRoutingItemCd(itemCd);
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '라우팅 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '라우팅 조회에 실패했습니다.');
     } finally {
       setRoutingLoading(false);
     }
@@ -361,10 +350,10 @@ export default function ProcessMasterPage() {
     async (routingId: number) => {
       try {
         await apiClient.delete(`/v1/routings/${routingId}`);
-        message.success('라우팅이 삭제되었습니다.');
+        toast.success('라우팅이 삭제되었습니다.');
         if (routingItemCd) fetchRoutings(routingItemCd);
       } catch (err: any) {
-        message.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
+        toast.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
       }
     },
     [routingItemCd, fetchRoutings],
@@ -378,7 +367,7 @@ export default function ProcessMasterPage() {
 
   const handleAddRouting = useCallback(async () => {
     if (!routingItemCd || !newRoutingProcessCd) {
-      message.warning('품목코드와 공정코드를 입력하세요.');
+      toast.warning('품목코드와 공정코드를 입력하세요.');
       return;
     }
     try {
@@ -389,45 +378,47 @@ export default function ProcessMasterPage() {
         std_time: newRoutingStdTime,
         setup_time: newRoutingSetupTime,
       });
-      message.success('라우팅이 추가되었습니다.');
+      toast.success('라우팅이 추가되었습니다.');
       setNewRoutingProcessCd('');
       setNewRoutingSeqNo((routings.length + 1) * 10);
       setNewRoutingStdTime(null);
       setNewRoutingSetupTime(null);
       fetchRoutings(routingItemCd);
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '추가에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '추가에 실패했습니다.');
     }
   }, [routingItemCd, newRoutingProcessCd, newRoutingSeqNo, newRoutingStdTime, newRoutingSetupTime, routings.length, fetchRoutings]);
 
-  const routingColumns = useMemo(
+  const routingColumns: TableColumn<RoutingRow>[] = useMemo(
     () => [
-      { title: '순서', dataIndex: 'seq_no', width: 60, align: 'center' as const },
+      { title: '순서', dataIndex: 'seq_no', width: 60, align: 'center' },
       { title: '공정코드', dataIndex: 'process_cd', width: 120 },
       {
         title: '공정명',
-        dataIndex: ['process', 'process_nm'],
+        dataIndex: 'process_cd',
+        key: 'process_nm',
         width: 150,
+        render: (_: unknown, record: RoutingRow) => (record as any).process?.process_nm ?? '-',
       },
       {
         title: '표준시간',
         dataIndex: 'std_time',
         width: 90,
-        align: 'right' as const,
+        align: 'right',
         render: (val: unknown) => (val != null ? Number(val) : '-'),
       },
       {
         title: '준비시간',
         dataIndex: 'setup_time',
         width: 90,
-        align: 'right' as const,
+        align: 'right',
         render: (val: unknown) => (val != null ? Number(val) : '-'),
       },
       {
         title: '사용',
         dataIndex: 'use_yn',
         width: 60,
-        align: 'center' as const,
+        align: 'center',
         render: (val: unknown) => (
           <Tag color={(val as string) === 'Y' ? 'green' : 'default'}>
             {(val as string) === 'Y' ? 'Y' : 'N'}
@@ -438,11 +429,22 @@ export default function ProcessMasterPage() {
         title: '',
         dataIndex: '_action',
         width: 50,
-        align: 'center' as const,
+        align: 'center',
         render: (_: unknown, record: RoutingRow) => (
-          <Popconfirm title="삭제하시겠습니까?" onConfirm={() => handleDeleteRouting(record.routing_id)} okText="삭제" cancelText="취소">
-            <Button size="small" type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          <Button
+            size="small"
+            variant="ghost"
+            className="text-red-500"
+            icon={<Trash2 className="w-4 h-4" />}
+            onClick={() =>
+              confirm({
+                title: '삭제하시겠습니까?',
+                onOk: () => handleDeleteRouting(record.routing_id),
+                okText: '삭제',
+                danger: true,
+              })
+            }
+          />
         ),
       },
     ],
@@ -456,7 +458,7 @@ export default function ProcessMasterPage() {
       const res = await apiClient.get(`/v1/processes/${processCd}/equipments`);
       setEquipMappings(res.data?.data ?? []);
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '설비 매핑 조회에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '설비 매핑 조회에 실패했습니다.');
     } finally {
       setEquipLoading(false);
     }
@@ -475,7 +477,7 @@ export default function ProcessMasterPage() {
 
   const handleAddEquipMapping = useCallback(async () => {
     if (!newEquipCd) {
-      message.warning('설비코드를 입력하세요.');
+      toast.warning('설비코드를 입력하세요.');
       return;
     }
     try {
@@ -483,12 +485,12 @@ export default function ProcessMasterPage() {
         equip_cd: newEquipCd,
         priority: newEquipPriority,
       });
-      message.success('설비 매핑이 추가되었습니다.');
+      toast.success('설비 매핑이 추가되었습니다.');
       setNewEquipCd('');
       setNewEquipPriority(1);
       fetchEquipMappings(equipProcessCd);
     } catch (err: any) {
-      message.error(err?.response?.data?.message ?? '추가에 실패했습니다.');
+      toast.error(err?.response?.data?.message ?? '추가에 실패했습니다.');
     }
   }, [equipProcessCd, newEquipCd, newEquipPriority, fetchEquipMappings]);
 
@@ -496,43 +498,53 @@ export default function ProcessMasterPage() {
     async (equipCd: string) => {
       try {
         await apiClient.delete(`/v1/processes/${equipProcessCd}/equipments/${equipCd}`);
-        message.success('설비 매핑이 삭제되었습니다.');
+        toast.success('설비 매핑이 삭제되었습니다.');
         fetchEquipMappings(equipProcessCd);
       } catch (err: any) {
-        message.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
+        toast.error(err?.response?.data?.message ?? '삭제에 실패했습니다.');
       }
     },
     [equipProcessCd, fetchEquipMappings],
   );
 
-  const equipColumns = useMemo(
+  const equipColumns: TableColumn<EquipMappingRow>[] = useMemo(
     () => [
       { title: '설비코드', dataIndex: 'equip_cd', width: 120 },
       {
         title: '설비명',
-        dataIndex: ['equipment', 'equip_nm'],
+        dataIndex: 'equip_cd',
+        key: 'equip_nm',
         width: 150,
+        render: (_: unknown, record: EquipMappingRow) => (record as any).equipment?.equip_nm ?? '-',
       },
       {
         title: '설비유형',
-        dataIndex: ['equipment', 'equip_type'],
+        dataIndex: 'equip_cd',
+        key: 'equip_type',
         width: 100,
+        render: (_: unknown, record: EquipMappingRow) => (record as any).equipment?.equip_type ?? '-',
       },
-      {
-        title: '우선순위',
-        dataIndex: 'priority',
-        width: 80,
-        align: 'center' as const,
-      },
+      { title: '우선순위', dataIndex: 'priority', width: 80, align: 'center' },
       {
         title: '',
         dataIndex: '_action',
         width: 50,
-        align: 'center' as const,
+        align: 'center',
         render: (_: unknown, record: EquipMappingRow) => (
-          <Popconfirm title="매핑을 삭제하시겠습니까?" onConfirm={() => handleRemoveEquipMapping(record.equip_cd)} okText="삭제" cancelText="취소">
-            <Button size="small" type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          <Button
+            size="small"
+            variant="ghost"
+            className="text-red-500"
+            icon={<Trash2 className="w-4 h-4" />}
+            onClick={() =>
+              confirm({
+                title: '매핑을 삭제하시겠습니까?',
+                onOk: () => handleRemoveEquipMapping(record.equip_cd),
+                okText: '삭제',
+                danger: true,
+              })
+            }
+          />
         ),
       },
     ],
@@ -540,7 +552,7 @@ export default function ProcessMasterPage() {
   );
 
   /* ── Table columns ─── */
-  const columns = useMemo(
+  const columns: TableColumn<ProcessRow>[] = useMemo(
     () => [
       { title: '공정코드', dataIndex: 'process_cd', width: 120, sorter: true, ellipsis: true },
       { title: '공정명', dataIndex: 'process_nm', width: 180, sorter: true, ellipsis: true },
@@ -548,7 +560,7 @@ export default function ProcessMasterPage() {
         title: '공정유형',
         dataIndex: 'process_type',
         width: 100,
-        align: 'center' as const,
+        align: 'center',
         sorter: true,
         render: (val: unknown) => {
           const v = val as string;
@@ -560,7 +572,7 @@ export default function ProcessMasterPage() {
         title: '표준시간',
         dataIndex: 'std_time',
         width: 90,
-        align: 'right' as const,
+        align: 'right',
         render: (val: unknown) => (val != null ? Number(val) : '-'),
       },
       {
@@ -574,7 +586,7 @@ export default function ProcessMasterPage() {
         title: '사용여부',
         dataIndex: 'use_yn',
         width: 80,
-        align: 'center' as const,
+        align: 'center',
         render: (val: unknown) => (
           <Tag color={(val as string) === 'Y' ? 'green' : 'default'}>
             {(val as string) === 'Y' ? '사용' : '미사용'}
@@ -592,58 +604,70 @@ export default function ProcessMasterPage() {
         title: '관리',
         dataIndex: '_action',
         width: 180,
-        align: 'center' as const,
-        fixed: 'right' as const,
+        align: 'center',
         render: (_: unknown, record: ProcessRow) => (
-          <Space size={4}>
+          <div className="flex items-center gap-1">
             <PermissionButton
               action="update"
               menuUrl={MENU_URL}
               fallback="hide"
               size="small"
-              type="text"
-              icon={<EditOutlined />}
+              variant="ghost"
+              icon={<Pencil className="w-4 h-4" />}
               onClick={() => handleEdit(record)}
             >
               {''}
             </PermissionButton>
-            <Popconfirm
-              title="공정을 삭제하시겠습니까?"
-              description="연결된 데이터가 있으면 삭제가 거부됩니다."
-              onConfirm={() => handleDelete(record)}
-              okText="삭제"
-              cancelText="취소"
+            <PermissionButton
+              action="delete"
+              menuUrl={MENU_URL}
+              fallback="hide"
+              size="small"
+              variant="ghost"
+              className="text-red-500"
+              icon={<Trash2 className="w-4 h-4" />}
+              onClick={() =>
+                confirm({
+                  title: '공정을 삭제하시겠습니까?',
+                  content: '연결된 데이터가 있으면 삭제가 거부됩니다.',
+                  onOk: () => handleDelete(record),
+                  okText: '삭제',
+                  danger: true,
+                })
+              }
             >
-              <PermissionButton
-                action="delete"
-                menuUrl={MENU_URL}
-                fallback="hide"
-                size="small"
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              >
-                {''}
-              </PermissionButton>
-            </Popconfirm>
+              {''}
+            </PermissionButton>
             <Button
               size="small"
-              type="text"
-              icon={<ToolOutlined />}
+              variant="ghost"
+              icon={<Wrench className="w-4 h-4" />}
               onClick={() => handleOpenEquip(record)}
               title="설비 매핑"
             />
             <Button
               size="small"
-              type="text"
-              icon={<HistoryOutlined />}
+              variant="ghost"
+              icon={<History className="w-4 h-4" />}
               onClick={() => handleHistory(record)}
             />
-          </Space>
+          </div>
         ),
       },
     ],
     [handleEdit, handleDelete, handleHistory, handleOpenEquip],
+  );
+
+  /* ── Pagination config ─── */
+  const paginationConfig: PaginationConfig = useMemo(
+    () => ({
+      current: pagination.page,
+      pageSize: pagination.pageSize,
+      total: pagination.total,
+      onChange: handlePageChange,
+      pageSizeOptions: [10, 20, 50, 100],
+    }),
+    [pagination, handlePageChange],
   );
 
   /* ── Render ─── */
@@ -656,31 +680,31 @@ export default function ProcessMasterPage() {
         onReset={handleSearchReset}
         loading={loading}
         extraButtons={
-          <Space>
+          <div className="flex items-center gap-2">
             <ExcelUploadButton
               uploadUrl="/v1/processes/import"
               onComplete={() => fetchProcesses(pagination.page, pagination.pageSize, sortField, sortOrder, filters)}
             />
             <ExcelDownloadButton filename="공정목록" columns={EXCEL_COLUMNS} data={fetchExcelData} />
-          </Space>
+          </div>
         }
       />
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <Space>
-          <span style={{ color: '#666', fontSize: 13 }}>
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-4">
+          <span className="text-gray-500 text-sm">
             총 <strong>{pagination.total.toLocaleString()}</strong>건
           </span>
-          <Button size="small" icon={<PartitionOutlined />} onClick={handleOpenRouting}>
+          <Button size="small" icon={<GitBranch className="w-4 h-4" />} onClick={handleOpenRouting}>
             라우팅 관리
           </Button>
-        </Space>
+        </div>
         <PermissionButton
           action="create"
           menuUrl={MENU_URL}
-          type="primary"
-          icon={<PlusOutlined />}
+          variant="primary"
+          icon={<Plus className="w-4 h-4" />}
           onClick={handleCreate}
         >
           공정 등록
@@ -693,18 +717,11 @@ export default function ProcessMasterPage() {
         dataSource={processes}
         rowKey="process_cd"
         loading={loading}
-        size="small"
-        scroll={{ x: 1100 }}
-        pagination={{
-          current: pagination.page,
-          pageSize: pagination.pageSize,
-          total: pagination.total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
-          showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}건`,
-        }}
-        onChange={handleTableChange as any}
+        pagination={paginationConfig}
+        sortBy={sortField}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        scrollX={1100}
       />
 
       {/* Create/Edit Modal */}
@@ -722,39 +739,66 @@ export default function ProcessMasterPage() {
       >
         {(form, mode) => (
           <>
-            <Form.Item
-              name="process_cd"
-              label="공정코드"
-              rules={[
-                { required: true, message: '공정코드를 입력하세요.' },
-                { max: 20, message: '최대 20자까지 입력 가능합니다.' },
-              ]}
-            >
-              <Input placeholder="공정코드 입력" disabled={mode === 'edit'} maxLength={20} />
-            </Form.Item>
-            <Form.Item
-              name="process_nm"
-              label="공정명"
-              rules={[
-                { required: true, message: '공정명을 입력하세요.' },
-                { max: 100, message: '최대 100자까지 입력 가능합니다.' },
-              ]}
-            >
-              <Input placeholder="공정명 입력" maxLength={100} />
-            </Form.Item>
-            <Form.Item name="process_type" label="공정유형">
-              <Select placeholder="공정유형 선택" options={PROCESS_TYPE_OPTIONS} allowClear />
-            </Form.Item>
-            <Form.Item name="std_time" label="표준시간(분)">
-              <InputNumber placeholder="표준시간" min={0} style={{ width: '100%' }} precision={2} />
-            </Form.Item>
-            <Form.Item name="workshop_cd" label="작업장코드">
-              <Input placeholder="작업장코드 입력" maxLength={20} />
-            </Form.Item>
+            <FormField label="공정코드" required>
+              <Input
+                name="process_cd"
+                placeholder="공정코드 입력"
+                disabled={mode === 'edit'}
+                maxLength={20}
+                required
+                defaultValue={form.getFieldsValue().process_cd ?? ''}
+                onChange={(e) => form.setFieldsValue({ process_cd: e.target.value } as Partial<ProcessFormValues>)}
+              />
+            </FormField>
+            <FormField label="공정명" required>
+              <Input
+                name="process_nm"
+                placeholder="공정명 입력"
+                maxLength={100}
+                required
+                defaultValue={form.getFieldsValue().process_nm ?? ''}
+                onChange={(e) => form.setFieldsValue({ process_nm: e.target.value } as Partial<ProcessFormValues>)}
+              />
+            </FormField>
+            <FormField label="공정유형">
+              <Select
+                name="process_type"
+                placeholder="공정유형 선택"
+                options={[{ label: '선택 안함', value: '' }, ...PROCESS_TYPE_OPTIONS]}
+                defaultValue={form.getFieldsValue().process_type ?? ''}
+                onChange={(e) => form.setFieldsValue({ process_type: e.target.value || null } as Partial<ProcessFormValues>)}
+              />
+            </FormField>
+            <FormField label="표준시간(분)">
+              <input
+                type="number"
+                name="std_time"
+                placeholder="표준시간"
+                min={0}
+                step={0.01}
+                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                defaultValue={form.getFieldsValue().std_time ?? ''}
+                onChange={(e) => form.setFieldsValue({ std_time: e.target.value ? Number(e.target.value) : null } as Partial<ProcessFormValues>)}
+              />
+            </FormField>
+            <FormField label="작업장코드">
+              <Input
+                name="workshop_cd"
+                placeholder="작업장코드 입력"
+                maxLength={20}
+                defaultValue={form.getFieldsValue().workshop_cd ?? ''}
+                onChange={(e) => form.setFieldsValue({ workshop_cd: e.target.value || null } as Partial<ProcessFormValues>)}
+              />
+            </FormField>
             {mode === 'edit' && (
-              <Form.Item name="use_yn" label="사용여부">
-                <Select options={USE_YN_OPTIONS} />
-              </Form.Item>
+              <FormField label="사용여부">
+                <Select
+                  name="use_yn"
+                  options={USE_YN_OPTIONS}
+                  defaultValue={form.getFieldsValue().use_yn ?? 'Y'}
+                  onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<ProcessFormValues>)}
+                />
+              </FormField>
             )}
           </>
         )}
@@ -774,59 +818,60 @@ export default function ProcessMasterPage() {
         title="라우팅 관리 (품목별 공정순서)"
         open={routingOpen}
         onClose={() => setRoutingOpen(false)}
-        styles={{ wrapper: { width: 720 } }}
+        width={720}
       >
-        <Space style={{ marginBottom: 16 }}>
+        <div className="flex items-center gap-2 mb-4">
           <Input
             placeholder="품목코드 입력"
             value={routingItemCdInput}
             onChange={(e) => setRoutingItemCdInput(e.target.value)}
-            onPressEnter={handleRoutingSearch}
-            style={{ width: 200 }}
+            onKeyDown={(e) => e.key === 'Enter' && handleRoutingSearch()}
+            className="!w-[200px]"
           />
-          <Button type="primary" onClick={handleRoutingSearch}>
+          <Button variant="primary" onClick={handleRoutingSearch}>
             조회
           </Button>
-        </Space>
+        </div>
 
         {routingItemCd && (
           <>
-            <Title level={5} style={{ marginBottom: 12 }}>
-              품목: {routingItemCd}
-            </Title>
+            <h5 className="text-sm font-semibold mb-3">품목: {routingItemCd}</h5>
 
             {/* Add routing entry */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div className="flex gap-2 mb-3 flex-wrap">
               <Input
                 placeholder="공정코드"
                 value={newRoutingProcessCd}
                 onChange={(e) => setNewRoutingProcessCd(e.target.value)}
-                style={{ width: 120 }}
+                className="!w-[120px]"
               />
-              <InputNumber
+              <input
+                type="number"
                 placeholder="순서"
                 value={newRoutingSeqNo}
-                onChange={(v) => setNewRoutingSeqNo(v ?? 10)}
+                onChange={(e) => setNewRoutingSeqNo(Number(e.target.value) || 10)}
                 min={1}
-                style={{ width: 80 }}
+                className="w-[80px] h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
               />
-              <InputNumber
+              <input
+                type="number"
                 placeholder="표준시간"
-                value={newRoutingStdTime}
-                onChange={(v) => setNewRoutingStdTime(v)}
+                value={newRoutingStdTime ?? ''}
+                onChange={(e) => setNewRoutingStdTime(e.target.value ? Number(e.target.value) : null)}
                 min={0}
-                precision={2}
-                style={{ width: 100 }}
+                step={0.01}
+                className="w-[100px] h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
               />
-              <InputNumber
+              <input
+                type="number"
                 placeholder="준비시간"
-                value={newRoutingSetupTime}
-                onChange={(v) => setNewRoutingSetupTime(v)}
+                value={newRoutingSetupTime ?? ''}
+                onChange={(e) => setNewRoutingSetupTime(e.target.value ? Number(e.target.value) : null)}
                 min={0}
-                precision={2}
-                style={{ width: 100 }}
+                step={0.01}
+                className="w-[100px] h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
               />
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleAddRouting}>
+              <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={handleAddRouting}>
                 추가
               </Button>
             </div>
@@ -836,8 +881,6 @@ export default function ProcessMasterPage() {
               dataSource={routings}
               rowKey="routing_id"
               loading={routingLoading}
-              size="small"
-              pagination={false}
             />
           </>
         )}
@@ -848,23 +891,24 @@ export default function ProcessMasterPage() {
         title={`설비 매핑 (${equipProcessCd})`}
         open={equipOpen}
         onClose={() => setEquipOpen(false)}
-        styles={{ wrapper: { width: 560 } }}
+        width={560}
       >
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div className="flex gap-2 mb-4">
           <Input
             placeholder="설비코드"
             value={newEquipCd}
             onChange={(e) => setNewEquipCd(e.target.value)}
-            style={{ width: 160 }}
+            className="!w-[160px]"
           />
-          <InputNumber
+          <input
+            type="number"
             placeholder="우선순위"
             value={newEquipPriority}
-            onChange={(v) => setNewEquipPriority(v ?? 1)}
+            onChange={(e) => setNewEquipPriority(Number(e.target.value) || 1)}
             min={1}
-            style={{ width: 100 }}
+            className="w-[100px] h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddEquipMapping}>
+          <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={handleAddEquipMapping}>
             추가
           </Button>
         </div>
@@ -874,8 +918,6 @@ export default function ProcessMasterPage() {
           dataSource={equipMappings}
           rowKey={(r) => `${r.equip_cd}-${r.process_cd}`}
           loading={equipLoading}
-          size="small"
-          pagination={false}
         />
       </Drawer>
     </div>

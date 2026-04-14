@@ -1,12 +1,30 @@
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
-import { Modal, Form, Button, Space, message } from 'antd';
-import type { FormInstance, FormProps } from 'antd';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import toast from '@/components/ui/toast';
 
 /* ── Types ─────────────────────────────────────────── */
 
 export type FormModalMode = 'create' | 'edit' | 'view';
+
+/**
+ * Minimal form handle exposed to children — replaces antd FormInstance.
+ * Children use this to register fields for validation and to read/write values.
+ */
+export interface FormHandle<T = Record<string, unknown>> {
+  /** Get all current form values */
+  getFieldsValue: () => T;
+  /** Set multiple field values */
+  setFieldsValue: (vals: Partial<T>) => void;
+  /** Reset all fields to initial state */
+  resetFields: () => void;
+  /** Validate all required fields. Throws if invalid. Returns values. */
+  validateFields: () => T;
+  /** Register a native form element ref for validation */
+  formRef: React.RefObject<HTMLFormElement | null>;
+}
 
 export interface FormModalProps<T = Record<string, unknown>> {
   /** 모달 열림 여부 */
@@ -22,15 +40,15 @@ export interface FormModalProps<T = Record<string, unknown>> {
   /** 모달 제목 (미지정 시 모드별 자동 생성) */
   title?: string;
   /** Form 레이아웃 */
-  layout?: FormProps['layout'];
-  /** label 컬럼 span (기본 6) */
-  labelCol?: FormProps['labelCol'];
-  /** wrapper 컬럼 span (기본 18) */
-  wrapperCol?: FormProps['wrapperCol'];
+  layout?: 'horizontal' | 'vertical';
+  /** label 컬럼 span (기본 6) — kept for interface compat */
+  labelCol?: { span?: number };
+  /** wrapper 컬럼 span (기본 18) — kept for interface compat */
+  wrapperCol?: { span?: number };
   /** 모달 너비 (기본 640) */
   width?: number;
   /** 폼 필드 렌더링 */
-  children: (form: FormInstance<T>, mode: FormModalMode) => React.ReactNode;
+  children: (form: FormHandle<T>, mode: FormModalMode) => React.ReactNode;
   /** 추가 버튼 렌더링 */
   extraFooter?: React.ReactNode;
   /** 모달 z-index */
@@ -55,27 +73,56 @@ export default function FormModal<T extends Record<string, unknown> = Record<str
   initialValues,
   title,
   layout = 'horizontal',
-  labelCol = { span: 6 },
-  wrapperCol = { span: 18 },
   width = 640,
   children,
   extraFooter,
   zIndex,
 }: FormModalProps<T>) {
-  const [form] = Form.useForm<T>();
-  const [loading, setLoading] = React.useState(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [formValues, setFormValues] = useState<Partial<T>>({});
   const isViewMode = mode === 'view';
 
   /* 모달 열릴 때 초기값 세팅 */
   useEffect(() => {
     if (open) {
       if (initialValues) {
-        form.setFieldsValue(initialValues as any);
+        setFormValues({ ...initialValues });
       } else {
-        form.resetFields();
+        setFormValues({});
       }
     }
-  }, [open, initialValues, form]);
+  }, [open, initialValues]);
+
+  /* Form handle exposed to children */
+  const form: FormHandle<T> = {
+    getFieldsValue: () => formValues as T,
+    setFieldsValue: (vals: Partial<T>) => {
+      setFormValues((prev) => ({ ...prev, ...vals }));
+    },
+    resetFields: () => {
+      setFormValues({});
+      formRef.current?.reset();
+    },
+    validateFields: () => {
+      /* Use native HTML5 validation */
+      if (formRef.current && !formRef.current.checkValidity()) {
+        formRef.current.reportValidity();
+        throw { errorFields: true };
+      }
+      /* Gather values from form elements as a fallback merge */
+      if (formRef.current) {
+        const fd = new FormData(formRef.current);
+        const nativeVals: Record<string, unknown> = {};
+        fd.forEach((v, k) => {
+          nativeVals[k] = v;
+        });
+        return { ...nativeVals, ...formValues } as T;
+      }
+      return formValues as T;
+    },
+    formRef,
+  };
 
   /* 저장 핸들러 */
   const handleOk = useCallback(async () => {
@@ -84,38 +131,37 @@ export default function FormModal<T extends Record<string, unknown> = Record<str
       return;
     }
     try {
-      const values = await form.validateFields();
+      const values = form.validateFields();
       setLoading(true);
       await onSubmit(values, mode);
-      message.success(mode === 'create' ? '등록되었습니다.' : '수정되었습니다.');
+      toast.success(mode === 'create' ? '등록되었습니다.' : '수정되었습니다.');
       form.resetFields();
       onClose();
     } catch (err: any) {
-      // validation error는 antd가 자동 표시, 그 외만 처리
       if (err?.errorFields) return;
-      message.error(err?.message ?? '저장 중 오류가 발생했습니다.');
+      toast.error(err?.message ?? '저장 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
-  }, [form, isViewMode, mode, onClose, onSubmit]);
+  }, [isViewMode, mode, onClose, onSubmit, formValues]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* 닫기 핸들러 */
   const handleCancel = useCallback(() => {
     form.resetFields();
     onClose();
-  }, [form, onClose]);
+  }, [onClose]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* 푸터 */
   const footer = isViewMode ? (
     <Button onClick={handleCancel}>닫기</Button>
   ) : (
-    <Space>
+    <div className="flex items-center gap-2">
       {extraFooter}
       <Button onClick={handleCancel}>취소</Button>
-      <Button type="primary" loading={loading} onClick={handleOk}>
+      <Button variant="primary" loading={loading} onClick={handleOk}>
         {mode === 'create' ? '등록' : '저장'}
       </Button>
-    </Space>
+    </div>
   );
 
   return (
@@ -123,22 +169,22 @@ export default function FormModal<T extends Record<string, unknown> = Record<str
       open={open}
       title={title ?? MODE_TITLES[mode]}
       width={width}
-      destroyOnClose
       maskClosable={false}
       footer={footer}
-      onCancel={handleCancel}
+      onClose={handleCancel}
       zIndex={zIndex}
     >
-      <Form<T>
-        form={form}
-        layout={layout}
-        labelCol={layout === 'horizontal' ? labelCol : undefined}
-        wrapperCol={layout === 'horizontal' ? wrapperCol : undefined}
-        disabled={isViewMode}
-        autoComplete="off"
-      >
-        {children(form, mode)}
-      </Form>
+      <div className="pt-2">
+        <form
+          ref={formRef}
+          autoComplete="off"
+          onSubmit={(e) => { e.preventDefault(); handleOk(); }}
+        >
+          <fieldset disabled={isViewMode} className={layout === 'horizontal' ? 'space-y-4' : 'space-y-3'}>
+            {children(form, mode)}
+          </fieldset>
+        </form>
+      </div>
     </Modal>
   );
 }
