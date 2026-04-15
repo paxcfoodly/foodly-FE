@@ -215,11 +215,8 @@ export default function MaintResultFormModal({
         setCreatedResultId(String(resultId));
       }
 
-      toast.success('보전이력이 등록되었습니다. 다음 점검일이 자동으로 갱신되었습니다.');
-      setFormValues({});
-      setChecklistItems([]);
-      setParts([]);
-      onOk();
+      toast.success('보전이력이 등록되었습니다. 이제 사진을 업로드할 수 있습니다.');
+      // 사진 업로드 UI 활성화를 위해 모달을 닫지 않고 유지. 사용자가 '완료' 를 눌러야 onOk() 발화.
     } catch (err: unknown) {
       const axiosErr = err as {
         errorFields?: unknown;
@@ -234,12 +231,22 @@ export default function MaintResultFormModal({
 
   /* ── Cancel ───────────────────────────────────── */
   const handleCancel = useCallback(() => {
+    // 저장 후 사진 업로드 단계에서 취소/X 를 눌러도 이력 자체는 이미 저장됐으므로 부모를 refresh
+    const wasSaved = !!createdResultId;
     setFormValues({});
     setChecklistItems([]);
     setParts([]);
     setCreatedResultId(undefined);
-    onCancel();
-  }, [onCancel]);
+    if (wasSaved) onOk(); else onCancel();
+  }, [createdResultId, onOk, onCancel]);
+
+  const handleDone = useCallback(() => {
+    setFormValues({});
+    setChecklistItems([]);
+    setParts([]);
+    setCreatedResultId(undefined);
+    onOk();
+  }, [onOk]);
 
   const hasPlanEquip = !!plan?.equip_cd;
 
@@ -251,17 +258,23 @@ export default function MaintResultFormModal({
       maskClosable={false}
       onClose={handleCancel}
       footer={
-        <div className="flex items-center gap-2">
-          <Button onClick={handleCancel}>취소</Button>
-          <Button
-            variant="primary"
-            loading={loading}
-            onClick={handleOk}
-            disabled={!allChecked && checklistItems.length > 0}
-          >
-            보전이력 저장
-          </Button>
-        </div>
+        createdResultId ? (
+          <div className="flex items-center gap-2">
+            <Button variant="primary" onClick={handleDone}>완료</Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button onClick={handleCancel}>취소</Button>
+            <Button
+              variant="primary"
+              loading={loading}
+              onClick={handleOk}
+              disabled={!allChecked && checklistItems.length > 0}
+            >
+              보전이력 저장
+            </Button>
+          </div>
+        )
       }
     >
       <div className="space-y-4">

@@ -529,8 +529,8 @@ export default function PreventivePage() {
                       <span>{item.assignee.worker_nm}</span>
                     )}
                   </div>
-                  {isDue && (
-                    <div className="mt-2">
+                  <div className="mt-2 flex items-center gap-2">
+                    {isDue && (
                       <Button
                         size="small"
                         variant="primary"
@@ -541,8 +541,18 @@ export default function PreventivePage() {
                       >
                         보전이력 등록
                       </Button>
-                    </div>
-                  )}
+                    )}
+                    <Button
+                      size="small"
+                      variant="ghost"
+                      onClick={() => {
+                        setDrawerOpen(false);
+                        handleHistoryClick(item as unknown as MaintPlan);
+                      }}
+                    >
+                      이력 보기
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -572,27 +582,27 @@ export default function PreventivePage() {
               const memo = r.memo as string | undefined;
               const maintNo = r.maint_no as string | undefined;
               return (
-                <div key={r.maint_result_id as number} className="border border-gray-100 rounded-lg p-3">
+                <div key={r.maint_result_id as number} className="border border-gray-100 rounded-lg p-2.5 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-700">{workDt}</span>
+                    <span className="font-medium text-gray-700 text-[13px]">{workDt}</span>
                     {maintType && <Tag color="blue">{maintType}</Tag>}
                   </div>
-                  <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+                  <div className="mt-1 flex items-center gap-2 text-gray-500">
                     <span>작업자:</span>
                     <span className="text-gray-700">{worker ?? '-'}</span>
                   </div>
                   {(cost !== undefined && cost !== null && cost !== '') && (
-                    <div className="mt-1 text-sm text-gray-500">
+                    <div className="mt-1 text-gray-500">
                       비용: <span className="text-gray-700">{Number(cost).toLocaleString()}</span>
                     </div>
                   )}
                   {memo && (
-                    <div className="mt-1 text-sm text-gray-500">
+                    <div className="mt-1 text-gray-500">
                       메모: <span className="text-gray-700">{memo}</span>
                     </div>
                   )}
                   {maintNo && (
-                    <div className="mt-1 text-xs text-gray-400">#{maintNo}</div>
+                    <div className="mt-1 text-[11px] text-gray-400">#{maintNo}</div>
                   )}
                 </div>
               );
