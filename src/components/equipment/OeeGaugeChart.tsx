@@ -12,44 +12,56 @@ interface OeeGaugeChartProps {
   hasData?: boolean;
 }
 
+// Threshold colors aligned with existing gauge semantics:
+// < 65% 빨강, < 85% 노랑, ≥ 85% 초록.
+function colorFor(value: number): string {
+  if (value < 65) return '#ff4d4f';
+  if (value < 85) return '#faad14';
+  return '#52c41a';
+}
+
 export default function OeeGaugeChart({ title, value, hasData = true }: OeeGaugeChartProps) {
+  const clamped = Math.max(0, Math.min(100, value));
+  const color = colorFor(clamped);
   const option = {
+    title: {
+      text: `${clamped.toFixed(1)}%`,
+      left: 'center',
+      top: '38%',
+      textStyle: { fontSize: 26, fontWeight: 700, color },
+    },
     series: [
       {
-        type: 'gauge',
-        startAngle: 200,
-        endAngle: -20,
-        min: 0,
-        max: 100,
-        axisLine: {
-          lineStyle: {
-            width: 20,
-            color: [
-              [0.65, '#ff4d4f'],
-              [0.85, '#faad14'],
-              [1, '#52c41a'],
-            ],
-          },
-        },
-        pointer: { show: true, length: '60%' },
-        detail: {
-          valueAnimation: true,
-          fontSize: 28,
-          fontWeight: 600,
-          formatter: '{value}%',
-          offsetCenter: [0, '70%'],
-        },
-        data: [{ value, name: title }],
-        title: { fontSize: 14, offsetCenter: [0, '90%'] },
-        axisTick: { show: true },
-        splitLine: { show: true },
-        axisLabel: { show: true, fontSize: 10 },
+        type: 'pie',
+        radius: ['62%', '82%'],
+        center: ['50%', '50%'],
+        silent: true,
+        label: { show: false },
+        labelLine: { show: false },
+        startAngle: 90,
+        data: [
+          { value: clamped, itemStyle: { color } },
+          { value: 100 - clamped, itemStyle: { color: '#f0f0f0' } },
+        ],
       },
     ],
   };
 
   const chart = (
-    <ReactECharts option={option} style={{ width: 200, height: 200 }} />
+    <div style={{ width: 180 }}>
+      <ReactECharts option={option} style={{ width: 180, height: 180 }} />
+      <div
+        style={{
+          textAlign: 'center',
+          fontSize: 13,
+          fontWeight: 500,
+          color: '#374151',
+          marginTop: -8,
+        }}
+      >
+        {title}
+      </div>
+    </div>
   );
 
   if (!hasData) {

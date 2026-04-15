@@ -29,7 +29,7 @@ export default function OeeTrendChart({ data }: OeeTrendChartProps) {
       data: ['OEE', '가동률'],
       top: 0,
     },
-    grid: { left: 50, right: 30, top: 40, bottom: 30, containLabel: false },
+    grid: { left: 50, right: 80, top: 40, bottom: 30, containLabel: false },
     xAxis: {
       type: 'category',
       data: dates,
@@ -58,12 +58,12 @@ export default function OeeTrendChart({ data }: OeeTrendChartProps) {
             {
               yAxis: 85,
               lineStyle: { type: 'dashed', color: '#52c41a', width: 1.5 },
-              label: { formatter: '목표 85%', position: 'end', color: '#52c41a', fontSize: 11 },
+              label: { formatter: '목표 85%', position: 'insideEndTop', color: '#52c41a', fontSize: 11 },
             },
             {
               yAxis: 65,
               lineStyle: { type: 'dashed', color: '#ff4d4f', width: 1.5 },
-              label: { formatter: '경고 65%', position: 'end', color: '#ff4d4f', fontSize: 11 },
+              label: { formatter: '경고 65%', position: 'insideEndTop', color: '#ff4d4f', fontSize: 11 },
             },
           ],
         },
