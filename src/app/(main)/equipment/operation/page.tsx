@@ -136,6 +136,7 @@ export default function EquipmentOperationPage() {
     {
       title: '현재상태',
       dataIndex: 'equip_statuses',
+      key: 'current_status',
       width: 100,
       render: (_, record) => {
         const current = record.equip_statuses?.[0];
@@ -151,6 +152,7 @@ export default function EquipmentOperationPage() {
     {
       title: '최근 변경시각',
       dataIndex: 'equip_statuses',
+      key: 'last_changed_at',
       width: 160,
       render: (_, record) => {
         const current = record.equip_statuses?.[0];
@@ -161,6 +163,7 @@ export default function EquipmentOperationPage() {
     {
       title: '비가동사유',
       dataIndex: 'equip_statuses',
+      key: 'down_reason',
       width: 120,
       render: (_, record) => {
         const current = record.equip_statuses?.[0];
@@ -170,6 +173,7 @@ export default function EquipmentOperationPage() {
     {
       title: '상태변경',
       dataIndex: 'equip_cd',
+      key: 'status_action',
       width: 120,
       align: 'center',
       render: (_, record) => (
