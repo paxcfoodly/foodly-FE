@@ -53,12 +53,26 @@ const MAINT_TYPE_COLORS: Record<string, string> = {
 function buildColumns(
   today: string,
   onResultClick: (plan: MaintPlan) => void,
+  onDeleteClick: (plan: MaintPlan) => void,
 ): DataGridColumn<MaintPlan>[] {
   return [
     {
+      title: '보전번호',
+      dataIndex: 'maint_plan_id',
+      width: 90,
+      align: 'center',
+    },
+    {
+      title: '계획명',
+      dataIndex: 'plan_nm',
+      width: 200,
+      ellipsis: true,
+      render: (val: unknown) => (val as string) ?? '-',
+    },
+    {
       title: '설비명',
       dataIndex: 'equipment',
-      width: 110,
+      width: 160,
       ellipsis: true,
       render: (val: unknown) => {
         const eq = val as { equip_nm?: string } | null;
@@ -68,7 +82,7 @@ function buildColumns(
     {
       title: '점검일',
       dataIndex: 'next_plan_date',
-      width: 100,
+      width: 110,
       align: 'center',
       render: (val: unknown) => {
         if (!val) return '-';
@@ -78,7 +92,7 @@ function buildColumns(
     {
       title: '유형',
       dataIndex: 'maint_type_cd',
-      width: 70,
+      width: 80,
       align: 'center',
       render: (val: unknown) => {
         const code = val as string | undefined;
@@ -87,9 +101,19 @@ function buildColumns(
       },
     },
     {
+      title: '주기',
+      dataIndex: 'cycle_type',
+      width: 80,
+      align: 'center',
+      render: (val: unknown) => {
+        const code = val as string | undefined;
+        return code ? (CYCLE_TYPE_LABELS[code] ?? code) : '-';
+      },
+    },
+    {
       title: '담당자',
       dataIndex: 'assignee',
-      width: 90,
+      width: 110,
       render: (val: unknown) => {
         const assignee = val as { worker_nm?: string } | null;
         return assignee?.worker_nm ?? '-';
@@ -99,7 +123,7 @@ function buildColumns(
       title: '상태',
       dataIndex: 'next_plan_date',
       key: 'status',
-      width: 80,
+      width: 90,
       align: 'center',
       render: (val: unknown) => {
         const dateStr = val ? String(val).slice(0, 10) : undefined;
@@ -115,23 +139,35 @@ function buildColumns(
     {
       title: '작업',
       dataIndex: 'action',
-      width: 110,
+      width: 200,
       align: 'center',
       render: (_val: unknown, record: MaintPlan) => {
         const dateStr = record.next_plan_date ? String(record.next_plan_date).slice(0, 10) : undefined;
         const isDue = dateStr ? dateStr <= today : false;
         return (
-          <Button
-            size="small"
-            variant="primary"
-            disabled={!isDue}
-            onClick={(e) => {
-              e.stopPropagation();
-              onResultClick(record);
-            }}
-          >
-            보전이력 등록
-          </Button>
+          <div className="inline-flex items-center gap-1">
+            <Button
+              size="small"
+              variant="primary"
+              disabled={!isDue}
+              onClick={(e) => {
+                e.stopPropagation();
+                onResultClick(record);
+              }}
+            >
+              이력등록
+            </Button>
+            <Button
+              size="small"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteClick(record);
+              }}
+            >
+              삭제
+            </Button>
+          </div>
         );
       },
     },
@@ -343,7 +379,7 @@ export default function PreventivePage() {
     : '보전 일정';
 
   /* ── Columns ─────────────────────────────────── */
-  const columns = buildColumns(today, handleResultClick);
+  const columns = buildColumns(today, handleResultClick, handleDeletePlan);
 
   /* ── Lazy-load modals ─────────────────────────── */
   const [MaintPlanFormModal, setMaintPlanFormModal] = useState<React.ComponentType<{
@@ -390,49 +426,43 @@ export default function PreventivePage() {
         </div>
       )}
 
-      {/* Two-panel split layout */}
-      <div className="flex gap-4">
-        {/* Left panel: Calendar (60%) */}
-        <div className="w-[60%] min-w-0">
-          <MaintenanceCalendar
-            plans={calendarPlans}
-            onDateSelect={handleDateSelect}
-            loading={calendarLoading}
-            onMonthChange={handleMonthChange}
-          />
+      {/* Stacked layout — calendar on top, full-width plan list below */}
+      <MaintenanceCalendar
+        plans={calendarPlans}
+        onDateSelect={handleDateSelect}
+        loading={calendarLoading}
+        onMonthChange={handleMonthChange}
+      />
+
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h5 className="text-sm font-semibold text-gray-700">보전계획 목록</h5>
+          <Button
+            variant="primary"
+            icon={<Plus className="w-4 h-4" />}
+            onClick={handleCreatePlan}
+          >
+            보전계획 등록
+          </Button>
         </div>
 
-        {/* Right panel: Plan list (40%) */}
-        <div className="w-[40%] min-w-0">
-          {/* Toolbar */}
-          <div className="mb-3">
-            <Button
-              variant="primary"
-              icon={<Plus className="w-4 h-4" />}
-              onClick={handleCreatePlan}
-            >
-              보전계획 등록
-            </Button>
-          </div>
-
-          {/* Plan DataGrid */}
-          <DataGrid<MaintPlan>
-            columns={columns}
-            dataSource={plans}
-            rowKey="maint_plan_id"
-            loading={loading}
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            onPageChange={handlePageChange}
-            emptyText="등록된 보전계획이 없습니다. 보전계획 등록 버튼을 눌러 첫 일정을 추가해주세요."
-            scrollX={560}
-            onRow={(record) => ({
-              onDoubleClick: () => handleRowDoubleClick(record),
-              style: { cursor: 'pointer' },
-            })}
-          />
-        </div>
+        <DataGrid<MaintPlan>
+          columns={columns}
+          dataSource={plans}
+          rowKey="maint_plan_id"
+          loading={loading}
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={handlePageChange}
+          emptyText="등록된 보전계획이 없습니다. 보전계획 등록 버튼을 눌러 첫 일정을 추가해주세요."
+          scrollX={1130}
+          storageKey="preventive-maint-grid"
+          onRow={(record) => ({
+            onDoubleClick: () => handleRowDoubleClick(record),
+            style: { cursor: 'pointer' },
+          })}
+        />
       </div>
 
       {/* Calendar date drawer */}
