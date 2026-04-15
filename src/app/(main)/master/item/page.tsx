@@ -13,7 +13,7 @@ import Table from '@/components/ui/Table';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -518,8 +518,8 @@ export default function ItemMasterPage() {
         width={560}
       >
         {(form, mode) => (
-          <>
-            <FormField label="품목코드" required>
+          <Section title="품목 정보">
+            <Row label="품목코드" required>
               <Input
                 name="item_cd"
                 placeholder="품목코드 입력"
@@ -529,8 +529,8 @@ export default function ItemMasterPage() {
                 defaultValue={form.getFieldsValue().item_cd ?? ''}
                 onChange={(e) => form.setFieldsValue({ item_cd: e.target.value } as Partial<ItemFormValues>)}
               />
-            </FormField>
-            <FormField label="품목명" required>
+            </Row>
+            <Row label="품목명" required>
               <Input
                 name="item_nm"
                 placeholder="품목명 입력"
@@ -539,8 +539,8 @@ export default function ItemMasterPage() {
                 defaultValue={form.getFieldsValue().item_nm ?? ''}
                 onChange={(e) => form.setFieldsValue({ item_nm: e.target.value } as Partial<ItemFormValues>)}
               />
-            </FormField>
-            <FormField label="품목유형" required>
+            </Row>
+            <Row label="품목유형" required>
               <Select
                 name="item_type"
                 placeholder="품목유형 선택"
@@ -549,32 +549,32 @@ export default function ItemMasterPage() {
                 defaultValue={form.getFieldsValue().item_type ?? ''}
                 onChange={(e) => form.setFieldsValue({ item_type: e.target.value } as Partial<ItemFormValues>)}
               />
-            </FormField>
-            <FormField label="단위">
+            </Row>
+            <Row label="단위">
               <CommonCodeSelect
                 groupCd="UNIT"
                 placeholder="단위 선택"
                 value={form.getFieldsValue().unit_cd}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => form.setFieldsValue({ unit_cd: e.target.value } as Partial<ItemFormValues>)}
               />
-            </FormField>
-            <FormField label="규격">
+            </Row>
+            <Row label="규격">
               <Input
                 name="spec"
                 placeholder="규격 입력"
                 defaultValue={form.getFieldsValue().spec ?? ''}
                 onChange={(e) => form.setFieldsValue({ spec: e.target.value } as Partial<ItemFormValues>)}
               />
-            </FormField>
-            <FormField label="도면번호">
+            </Row>
+            <Row label="도면번호">
               <Input
                 name="drawing_no"
                 placeholder="도면번호 입력"
                 defaultValue={form.getFieldsValue().drawing_no ?? ''}
                 onChange={(e) => form.setFieldsValue({ drawing_no: e.target.value } as Partial<ItemFormValues>)}
               />
-            </FormField>
-            <FormField label="안전재고">
+            </Row>
+            <Row label="안전재고">
               <input
                 type="number"
                 name="safety_stock"
@@ -585,18 +585,18 @@ export default function ItemMasterPage() {
                 defaultValue={form.getFieldsValue().safety_stock ?? ''}
                 onChange={(e) => form.setFieldsValue({ safety_stock: e.target.value ? Number(e.target.value) : undefined } as Partial<ItemFormValues>)}
               />
-            </FormField>
+            </Row>
             {mode === 'edit' && (
-              <FormField label="사용여부">
+              <Row label="사용여부">
                 <Select
                   name="use_yn"
                   options={USE_YN_OPTIONS}
                   defaultValue={form.getFieldsValue().use_yn ?? 'Y'}
                   onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<ItemFormValues>)}
                 />
-              </FormField>
+              </Row>
             )}
-          </>
+          </Section>
         )}
       </FormModal>
 

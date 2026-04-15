@@ -17,7 +17,7 @@ import Table from '@/components/ui/Table';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -756,15 +756,15 @@ export default function BomMasterPage() {
         width={520}
       >
         {(form, mode) => (
-          <>
-            <FormField label="모품목코드">
+          <Section title="BOM 정보">
+            <Row label="모품목코드">
               <Input
                 name="parent_item_cd"
                 disabled
                 defaultValue={form.getFieldsValue().parent_item_cd ?? ''}
               />
-            </FormField>
-            <FormField label="자품목코드" required>
+            </Row>
+            <Row label="자품목코드" required>
               <Input
                 name="child_item_cd"
                 placeholder="자품목코드 입력"
@@ -774,8 +774,8 @@ export default function BomMasterPage() {
                 defaultValue={form.getFieldsValue().child_item_cd ?? ''}
                 onChange={(e) => form.setFieldsValue({ child_item_cd: e.target.value } as Partial<BomFormValues>)}
               />
-            </FormField>
-            <FormField label="소요량" required>
+            </Row>
+            <Row label="소요량" required>
               <input
                 type="number"
                 name="qty"
@@ -787,8 +787,8 @@ export default function BomMasterPage() {
                 defaultValue={form.getFieldsValue().qty ?? ''}
                 onChange={(e) => form.setFieldsValue({ qty: Number(e.target.value) } as Partial<BomFormValues>)}
               />
-            </FormField>
-            <FormField label="손실률(%)">
+            </Row>
+            <Row label="손실률(%)">
               <input
                 type="number"
                 name="loss_rate"
@@ -800,8 +800,8 @@ export default function BomMasterPage() {
                 defaultValue={form.getFieldsValue().loss_rate ?? ''}
                 onChange={(e) => form.setFieldsValue({ loss_rate: e.target.value ? Number(e.target.value) : undefined } as Partial<BomFormValues>)}
               />
-            </FormField>
-            <FormField label="대체품목">
+            </Row>
+            <Row label="대체품목">
               <Input
                 name="alt_item_cd"
                 placeholder="대체품목코드 입력"
@@ -809,8 +809,8 @@ export default function BomMasterPage() {
                 defaultValue={form.getFieldsValue().alt_item_cd ?? ''}
                 onChange={(e) => form.setFieldsValue({ alt_item_cd: e.target.value } as Partial<BomFormValues>)}
               />
-            </FormField>
-            <FormField label="공정코드">
+            </Row>
+            <Row label="공정코드">
               <Input
                 name="process_cd"
                 placeholder="공정코드 입력"
@@ -818,18 +818,18 @@ export default function BomMasterPage() {
                 defaultValue={form.getFieldsValue().process_cd ?? ''}
                 onChange={(e) => form.setFieldsValue({ process_cd: e.target.value } as Partial<BomFormValues>)}
               />
-            </FormField>
+            </Row>
             {mode === 'edit' && (
-              <FormField label="사용여부">
+              <Row label="사용여부">
                 <Select
                   name="use_yn"
                   options={USE_YN_OPTIONS}
                   defaultValue={form.getFieldsValue().use_yn ?? 'Y'}
                   onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<BomFormValues>)}
                 />
-              </FormField>
+              </Row>
             )}
-          </>
+          </Section>
         )}
       </FormModal>
 
