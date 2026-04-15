@@ -2,7 +2,9 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import dayjs from 'dayjs';
-import SearchForm from '@/components/common/SearchForm';
+import { Search, RotateCcw } from 'lucide-react';
+import Button from '@/components/ui/Button';
+import Select from '@/components/ui/Select';
 import DataGrid from '@/components/common/DataGrid';
 import ExcelDownloadButton from '@/components/common/ExcelDownloadButton';
 import ProdDailyBarChart from '@/components/reports/ProdDailyBarChart';
@@ -53,14 +55,14 @@ export default function ProductionReportPage() {
   const defaultEnd = dayjs();
   const defaultStart = defaultEnd.subtract(30, 'day');
 
-  // Stored as YYYY-MM-DD strings so SearchForm's <input type="date"> can
-  // render them directly and handleSearch can forward them to the BE
-  // without coercion (Dayjs.toString() would become a GMT string the
-  // BE rejects as 400).
-  const [dateRange] = useState<[string, string]>([
-    defaultStart.format('YYYY-MM-DD'),
-    defaultEnd.format('YYYY-MM-DD'),
-  ]);
+  // Draft filter values (bound to the filter bar inputs). They only
+  // apply to fetches when the user clicks 검색.
+  const [startDateInput, setStartDateInput] = useState(defaultStart.format('YYYY-MM-DD'));
+  const [endDateInput, setEndDateInput] = useState(defaultEnd.format('YYYY-MM-DD'));
+  const [groupByInput, setGroupByInput] = useState<string>('item');
+  const [itemCdInput, setItemCdInput] = useState<string>('');
+  const [workshopCdInput, setWorkshopCdInput] = useState<string>('');
+
   const [loading, setLoading] = useState(false);
   const [dailyData, setDailyData] = useState<DailyPoint[]>([]);
   const [summaryData, setSummaryData] = useState<SummaryRow[]>([]);
@@ -68,7 +70,7 @@ export default function ProductionReportPage() {
   const [itemOptions, setItemOptions] = useState<ItemOption[]>([]);
   const [workshopOptions, setWorkshopOptions] = useState<WorkshopOption[]>([]);
 
-  // Track current filter params for excel download filename
+  // Track applied filter params (used for excel download filename)
   const [currentStart, setCurrentStart] = useState(defaultStart.format('YYYY-MM-DD'));
   const [currentEnd, setCurrentEnd] = useState(defaultEnd.format('YYYY-MM-DD'));
 
@@ -143,22 +145,24 @@ export default function ProductionReportPage() {
     );
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSearch = useCallback(
-    (values: Record<string, unknown>) => {
-      const dateRangeVal = values.dateRange as string[] | undefined;
-      const start = dateRangeVal?.[0] ?? dayjs().subtract(30, 'day').format('YYYY-MM-DD');
-      const end = dateRangeVal?.[1] ?? dayjs().format('YYYY-MM-DD');
-      const gb = (values.group_by as string) ?? 'item';
-      const itemCd = values.item_cd as string | undefined;
-      const workshopCd = values.workshop_cd as string | undefined;
-      fetchAll(start, end, gb, itemCd, workshopCd);
-    },
-    [fetchAll],
-  );
+  const handleSearch = useCallback(() => {
+    fetchAll(
+      startDateInput,
+      endDateInput,
+      groupByInput,
+      itemCdInput || undefined,
+      workshopCdInput || undefined,
+    );
+  }, [fetchAll, startDateInput, endDateInput, groupByInput, itemCdInput, workshopCdInput]);
 
   const handleReset = useCallback(() => {
     const end = dayjs().format('YYYY-MM-DD');
     const start = dayjs().subtract(30, 'day').format('YYYY-MM-DD');
+    setStartDateInput(start);
+    setEndDateInput(end);
+    setGroupByInput('item');
+    setItemCdInput('');
+    setWorkshopCdInput('');
     fetchAll(start, end, 'item');
   }, [fetchAll]);
 
@@ -259,58 +263,85 @@ export default function ProductionReportPage() {
     [summaryData],
   );
 
-  // ─── Search fields ───
-
-  const searchFields = React.useMemo(
-    () => [
-      {
-        name: 'dateRange',
-        label: '조회 기간',
-        type: 'dateRange' as const,
-        defaultValue: dateRange,
-        span: 6,
-      },
-      {
-        name: 'group_by',
-        label: '집계 기준',
-        type: 'select' as const,
-        defaultValue: 'item',
-        options: GROUP_BY_OPTIONS,
-        span: 4,
-      },
-      {
-        name: 'item_cd',
-        label: '품목',
-        type: 'select' as const,
-        placeholder: '전체',
-        options: itemOptions,
-        span: 6,
-      },
-      {
-        name: 'workshop_cd',
-        label: '라인',
-        type: 'select' as const,
-        placeholder: '전체',
-        options: workshopOptions,
-        span: 6,
-      },
-    ],
-    [dateRange, itemOptions, workshopOptions],
-  );
-
   return (
     <div className="pb-6">
       <h4 className="text-lg font-semibold text-gray-900 mb-4">
         생산일보
       </h4>
 
-      {/* SearchForm */}
-      <SearchForm
-        fields={searchFields}
-        onSearch={handleSearch}
-        onReset={handleReset}
-        loading={loading}
-      />
+      {/* Filter bar — dateRange는 고정 폭, select 3개만 flex-1로 비율 축소 */}
+      <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+        <div className="flex items-end gap-3">
+          <div className="shrink-0">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              조회 기간
+            </label>
+            <div className="flex items-center gap-1">
+              <input
+                type="date"
+                value={startDateInput}
+                onChange={(e) => setStartDateInput(e.target.value)}
+                className="h-9 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15"
+              />
+              <span className="text-gray-400 text-xs">~</span>
+              <input
+                type="date"
+                value={endDateInput}
+                onChange={(e) => setEndDateInput(e.target.value)}
+                className="h-9 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15"
+              />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              집계 기준
+            </label>
+            <Select
+              value={groupByInput}
+              onChange={(e) => setGroupByInput(e.target.value)}
+              options={GROUP_BY_OPTIONS}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              품목
+            </label>
+            <Select
+              placeholder="전체"
+              value={itemCdInput}
+              onChange={(e) => setItemCdInput(e.target.value)}
+              options={itemOptions}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              라인
+            </label>
+            <Select
+              placeholder="전체"
+              value={workshopCdInput}
+              onChange={(e) => setWorkshopCdInput(e.target.value)}
+              options={workshopOptions}
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-3">
+          <Button
+            icon={<RotateCcw className="w-4 h-4" />}
+            onClick={handleReset}
+          >
+            초기화
+          </Button>
+          <Button
+            variant="primary"
+            icon={<Search className="w-4 h-4" />}
+            onClick={handleSearch}
+            loading={loading}
+          >
+            검색
+          </Button>
+        </div>
+      </div>
 
       {/* Chart */}
       <div className="bg-white rounded-xl p-4 shadow-sm mt-6">
