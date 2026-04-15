@@ -58,14 +58,18 @@ export default function ProdDailyBarChart({ data, height = 320 }: ProdDailyBarCh
           fontSize: 12,
           fontFamily: 'Pretendard Variable, Pretendard, -apple-system, sans-serif',
         },
+        // 좌측 수량 축의 splitLine과 다른 간격으로 그어져 시각적으로
+        // 어수선해 보이는 문제를 피하려고 우측 축의 그리드는 끔.
+        splitLine: { show: false },
       },
     ],
     series: [
       {
         name: '생산량',
         type: 'bar',
+        barMaxWidth: 28,
         data: data.map((d) => d.good_qty),
-        itemStyle: { color: '#1677ff' },
+        itemStyle: { color: '#1677ff', borderRadius: [4, 4, 0, 0] },
         yAxisIndex: 0,
       },
       {

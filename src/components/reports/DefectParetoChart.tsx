@@ -61,6 +61,9 @@ export default function DefectParetoChart({
         min: 0,
         max: 100,
         axisLabel: { formatter: '{value}%' },
+        // 좌측 수량 축의 splitLine과 다른 간격으로 그어져 시각적으로
+        // 어수선해 보이는 문제를 피하려고 우측 축의 그리드는 끔.
+        splitLine: { show: false },
       },
     ],
     series: [

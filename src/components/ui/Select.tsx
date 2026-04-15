@@ -36,10 +36,13 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
         `}
         {...rest}
       >
-        {placeholder && (
+        {placeholder && !options.some((o) => String(o.value) === '') && (
           // Placeholder option stays selectable so the user can re-pick
           // it to clear a prior selection (e.g. go back to "전체" after
-          // choosing FIN001 in a filter dropdown).
+          // choosing FIN001 in a filter dropdown). Skipped when caller
+          // already provides an empty-value option (e.g. CommonCodeSelect
+          // with showAll), otherwise the dropdown would show two
+          // identical "전체" rows.
           <option value="">{placeholder}</option>
         )}
         {options.map((opt) => (
