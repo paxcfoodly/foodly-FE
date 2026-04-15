@@ -8,7 +8,7 @@ import Table from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
-import FormField from '@/components/ui/FormField';
+import { Section } from '@/components/ui/Section';
 import PermissionButton from '@/components/auth/PermissionButton';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
 import apiClient from '@/lib/apiClient';
@@ -160,37 +160,49 @@ export default function LotManagementPage() {
       <Modal open={splitOpen} title="LOT 분할" width={560} onClose={() => setSplitOpen(false)}
         footer={<div className="flex items-center gap-2"><Button onClick={() => setSplitOpen(false)}>취소</Button><Button variant="primary" loading={splitLoading} onClick={handleSplitSubmit}>분할 실행</Button></div>}>
         {splitLot && (
-          <>
-            <div className="mb-4 p-3 bg-dark-700 rounded-lg">
-              <p className="text-sm"><strong>부모 LOT:</strong> {splitLot.lot_no}</p>
-              <p className="text-sm mt-1"><strong>품목:</strong> {splitLot.item?.item_nm ?? splitLot.item_cd} | <strong>수량:</strong> {splitLot.lot_qty.toLocaleString()}</p>
-            </div>
-            <div className="flex justify-between mb-2"><strong className="text-sm">자식 LOT 수량 입력</strong><span className="text-xs text-gray-500">합계: {splitChildren.reduce((s, c) => s + (c.qty || 0), 0).toLocaleString()} / {splitLot.lot_qty.toLocaleString()}</span></div>
-            {splitChildren.map((child, idx) => (
-              <div key={idx} className="flex items-center gap-2 mb-2">
-                <span className="w-[60px] text-sm">LOT {idx + 1}:</span>
-                <input type="number" min={0.001} value={child.qty} onChange={(e) => { const next = [...splitChildren]; next[idx] = { qty: Number(e.target.value) || 0 }; setSplitChildren(next); }}
-                  className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" />
-                {splitChildren.length > 2 && (<Button variant="ghost" className="text-red-500" icon={<Minus className="w-4 h-4" />} onClick={() => setSplitChildren(splitChildren.filter((_, i) => i !== idx))} />)}
-              </div>
-            ))}
-            <Button variant="ghost" block icon={<Plus className="w-4 h-4" />} onClick={() => setSplitChildren([...splitChildren, { qty: 0 }])} className="mt-2 border-dashed">자식 LOT 추가</Button>
-          </>
+          <div className="space-y-5">
+            <Section title="부모 LOT">
+              <p className="text-sm"><span className="text-gray-400">LOT 번호: </span>{splitLot.lot_no}</p>
+              <p className="text-sm"><span className="text-gray-400">품목: </span>{splitLot.item?.item_nm ?? splitLot.item_cd}</p>
+              <p className="text-sm"><span className="text-gray-400">수량: </span>{splitLot.lot_qty.toLocaleString()}</p>
+            </Section>
+            <Section
+              title="자식 LOT"
+              aside={`합계 ${splitChildren.reduce((s, c) => s + (c.qty || 0), 0).toLocaleString()} / ${splitLot.lot_qty.toLocaleString()}`}
+              action={
+                <Button variant="ghost" size="small" icon={<Plus className="w-4 h-4" />} onClick={() => setSplitChildren([...splitChildren, { qty: 0 }])}>
+                  자식 LOT 추가
+                </Button>
+              }
+            >
+              {splitChildren.map((child, idx) => (
+                <div key={idx} className="grid grid-cols-[110px_1fr] gap-3 items-center">
+                  <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">LOT {idx + 1}</div>
+                  <div className="flex items-center gap-2">
+                    <input type="number" min={0.001} value={child.qty} onChange={(e) => { const next = [...splitChildren]; next[idx] = { qty: Number(e.target.value) || 0 }; setSplitChildren(next); }}
+                      className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" />
+                    {splitChildren.length > 2 && (<Button variant="ghost" className="text-red-500" icon={<Minus className="w-4 h-4" />} onClick={() => setSplitChildren(splitChildren.filter((_, i) => i !== idx))} />)}
+                  </div>
+                </div>
+              ))}
+            </Section>
+          </div>
         )}
       </Modal>
 
       {/* Merge Modal */}
       <Modal open={mergeOpen} title="LOT 병합" width={600} onClose={() => setMergeOpen(false)}
         footer={<div className="flex items-center gap-2"><Button onClick={() => setMergeOpen(false)}>취소</Button><Button variant="primary" loading={mergeLoading} onClick={handleMergeSubmit}>병합 실행</Button></div>}>
-        <p className="text-gray-500 text-sm mb-3">동일 품목의 ACTIVE LOT을 2개 이상 선택하세요.</p>
-        {activeLots.length === 0 ? (<p className="text-gray-400 text-sm">현재 목록에 ACTIVE LOT이 없습니다. 먼저 ACTIVE 상태 LOT을 검색하세요.</p>) : (
-          <div className="space-y-2">{activeLots.map((lot) => (
-            <label key={lot.lot_no} className="flex items-center gap-2 p-2 rounded-lg hover:bg-dark-700 cursor-pointer">
-              <input type="checkbox" checked={mergeSelectedLots.includes(lot.lot_no)} onChange={() => setMergeSelectedLots((prev) => prev.includes(lot.lot_no) ? prev.filter((n) => n !== lot.lot_no) : [...prev, lot.lot_no])} className="accent-cyan-accent" />
-              <span className="text-sm">{lot.lot_no} — {lot.item?.item_nm ?? lot.item_cd} ({lot.lot_qty.toLocaleString()})</span>
-            </label>
-          ))}</div>
-        )}
+        <Section title="병합 LOT 선택" aside="동일 품목 ACTIVE LOT 2개 이상">
+          {activeLots.length === 0 ? (<p className="text-gray-400 text-sm">현재 목록에 ACTIVE LOT이 없습니다. 먼저 ACTIVE 상태 LOT을 검색하세요.</p>) : (
+            <div className="space-y-2">{activeLots.map((lot) => (
+              <label key={lot.lot_no} className="flex items-center gap-2 p-2 rounded-lg hover:bg-dark-700 cursor-pointer">
+                <input type="checkbox" checked={mergeSelectedLots.includes(lot.lot_no)} onChange={() => setMergeSelectedLots((prev) => prev.includes(lot.lot_no) ? prev.filter((n) => n !== lot.lot_no) : [...prev, lot.lot_no])} className="accent-cyan-accent" />
+                <span className="text-sm">{lot.lot_no} — {lot.item?.item_nm ?? lot.item_cd} ({lot.lot_qty.toLocaleString()})</span>
+              </label>
+            ))}</div>
+          )}
+        </Section>
       </Modal>
 
       {/* Print Modal */}
