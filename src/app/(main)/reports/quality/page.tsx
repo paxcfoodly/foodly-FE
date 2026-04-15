@@ -174,15 +174,16 @@ export default function QualityReportPage() {
             onChange={(e) => setEndDate(e.target.value)}
             className="h-9 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15"
           />
-          <CommonCodeSelect
-            groupCd="DEFECT_TYPE"
-            placeholder="불량유형 전체"
-            value={defectTypeCd}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setDefectTypeCd(e.target.value || undefined)}
-            style={{ width: 160 }}
-            showAll
-            allLabel="불량유형 전체"
-          />
+          <div className="w-40">
+            <CommonCodeSelect
+              groupCd="DEFECT_TYPE"
+              placeholder="불량유형 전체"
+              value={defectTypeCd}
+              onChange={(e) => setDefectTypeCd(e.target.value || undefined)}
+              showAll
+              allLabel="불량유형 전체"
+            />
+          </div>
           <Button
             variant="primary"
             icon={<Search className="w-4 h-4" />}

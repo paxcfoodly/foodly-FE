@@ -199,12 +199,13 @@ export default function ComponentDemoPage() {
 
       <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
         <h6 className="text-sm font-medium text-gray-500 mb-2">CommonCodeSelect 단독 사용</h6>
-        <CommonCodeSelect
-          groupCd="ITEM_TYPE"
-          showAll
-          style={{ width: 240 }}
-          placeholder="품목유형 선택"
-        />
+        <div className="w-60">
+          <CommonCodeSelect
+            groupCd="ITEM_TYPE"
+            showAll
+            placeholder="품목유형 선택"
+          />
+        </div>
       </div>
 
       {/* ── 모달 데모 ─── */}

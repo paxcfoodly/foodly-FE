@@ -145,7 +145,6 @@ export default function StatusTogglePopover({
                     setDownReasonError(false);
                   }}
                   placeholder="비가동 사유 선택"
-                  style={{ width: '100%' }}
                 />
                 {downReasonError && (
                   <p className="text-xs text-red-500 mt-1">
