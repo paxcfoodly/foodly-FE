@@ -8,7 +8,6 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import FormField from '@/components/ui/FormField';
 import Tooltip from '@/components/ui/Tooltip';
 import toast from '@/components/ui/toast';
 import CommonCodeSelect from '@/components/common/CommonCodeSelect';
@@ -45,6 +44,54 @@ interface WorkerOption {
 interface EquipmentOption {
   equip_cd: string;
   equip_nm: string;
+}
+
+/* ── Layout helpers ────────────────────────────────── */
+
+function Section({
+  title,
+  aside,
+  action,
+  children,
+}: {
+  title: string;
+  aside?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="border border-gray-100 rounded-lg">
+      <header className="flex items-center justify-between px-4 h-10 border-b border-gray-100 bg-gray-50/60 rounded-t-lg">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-1 h-4 bg-cyan-accent rounded-sm" />
+          <span className="text-sm font-semibold text-gray-700">{title}</span>
+          {aside && <span className="text-xs text-gray-400">{aside}</span>}
+        </div>
+        {action}
+      </header>
+      <div className="p-4 space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function Row({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[110px_1fr] gap-3 items-start">
+      <label className="text-xs font-medium text-gray-400 uppercase tracking-wide pt-2">
+        {label}
+        {required && <span className="text-red-accent ml-0.5">*</span>}
+      </label>
+      <div>{children}</div>
+    </div>
+  );
 }
 
 /* ── Component ────────────────────────────────────── */
@@ -293,212 +340,198 @@ export default function MaintResultFormModal({
         )
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-5">
         {/* Section: Basic info */}
-        <div className="border-b border-gray-100 pb-1 mb-3">
-          <span className="text-sm font-medium text-gray-500">기본 정보</span>
-        </div>
-
-        {/* Equipment — readonly if from plan */}
-        {hasPlanEquip ? (
-          <FormField label="설비" layout="horizontal">
-            <span className="text-sm text-gray-700">
-              {(plan?.equipment as { equip_nm?: string } | undefined)?.equip_nm ??
-                String(plan?.equip_cd ?? '')}
-            </span>
-          </FormField>
-        ) : (
-          <FormField label="설비" required layout="horizontal">
-            <Select
-              placeholder="설비 선택"
-              value={(formValues.equip_cd as string) ?? ''}
-              onChange={(e) => setFormValues((prev) => ({ ...prev, equip_cd: e.target.value }))}
-              options={equipments.map((e) => ({
-                label: e.equip_nm,
-                value: e.equip_cd,
-              }))}
+        <Section title="기본 정보">
+          <Row label="설비" required={!hasPlanEquip}>
+            {hasPlanEquip ? (
+              <span className="text-sm text-gray-700 leading-9">
+                {(plan?.equipment as { equip_nm?: string } | undefined)?.equip_nm ??
+                  String(plan?.equip_cd ?? '')}
+              </span>
+            ) : (
+              <Select
+                placeholder="설비 선택"
+                value={(formValues.equip_cd as string) ?? ''}
+                onChange={(e) => setFormValues((prev) => ({ ...prev, equip_cd: e.target.value }))}
+                options={equipments.map((e) => ({ label: e.equip_nm, value: e.equip_cd }))}
+              />
+            )}
+          </Row>
+          <Row label="보전유형">
+            <CommonCodeSelect
+              groupCd="MAINT_TYPE"
+              placeholder="보전유형 선택"
+              showAll
+              value={(formValues.maint_type_cd as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, maint_type_cd: e.target.value }))}
             />
-          </FormField>
-        )}
-
-        {/* Maintenance type */}
-        <FormField label="보전유형" layout="horizontal">
-          <CommonCodeSelect
-            groupCd="MAINT_TYPE"
-            placeholder="보전유형 선택"
-            showAll
-            value={(formValues.maint_type_cd as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, maint_type_cd: e.target.value }))}
-          />
-        </FormField>
-
-        {/* Work date */}
-        <FormField label="작업일" required layout="horizontal">
-          <input
-            type="date"
-            className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
-            value={(formValues.work_dt as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, work_dt: e.target.value }))}
-            required
-          />
-        </FormField>
-
-        {/* Worker */}
-        <FormField label="작업자" layout="horizontal">
-          <Select
-            placeholder="작업자 선택"
-            value={(formValues.worker_id as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, worker_id: e.target.value || undefined }))}
-            options={workers.map((w) => ({
-              label: w.worker_nm,
-              value: w.worker_id,
-            }))}
-          />
-        </FormField>
-
-        {/* Cost */}
-        <FormField label="비용" layout="horizontal">
-          <input
-            type="number"
-            className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
-            placeholder="보전 비용"
-            min={0}
-            value={(formValues.cost as number) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, cost: e.target.value ? Number(e.target.value) : undefined }))}
-          />
-        </FormField>
-
-        {/* Memo */}
-        <FormField label="메모" layout="horizontal">
-          <Textarea
-            rows={2}
-            placeholder="보전 내용 메모"
-            value={(formValues.memo as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, memo: e.target.value }))}
-          />
-        </FormField>
+          </Row>
+          <Row label="작업일" required>
+            <input
+              type="date"
+              className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+              value={(formValues.work_dt as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, work_dt: e.target.value }))}
+              required
+            />
+          </Row>
+          <Row label="작업자">
+            <Select
+              placeholder="작업자 선택"
+              value={(formValues.worker_id as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, worker_id: e.target.value || undefined }))}
+              options={workers.map((w) => ({ label: w.worker_nm, value: w.worker_id }))}
+            />
+          </Row>
+          <Row label="비용">
+            <input
+              type="number"
+              className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+              placeholder="보전 비용"
+              min={0}
+              value={(formValues.cost as number) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, cost: e.target.value ? Number(e.target.value) : undefined }))}
+            />
+          </Row>
+          <Row label="메모">
+            <Textarea
+              rows={2}
+              placeholder="보전 내용 메모"
+              value={(formValues.memo as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, memo: e.target.value }))}
+            />
+          </Row>
+        </Section>
 
         {/* Section: Checklist results */}
         {checklistItems.length > 0 && (
-          <>
-            <div className="border-b border-gray-100 pb-1 mb-3 mt-6 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500">점검항목 체크</span>
-              <span className="text-xs text-gray-400">모든 항목 필수</span>
-            </div>
-
+          <Section title="점검항목 체크" aside="모든 항목 필수">
             {!allChecked && (
-              <p className="text-sm text-yellow-600 mb-2 ml-36">
+              <p className="text-sm text-yellow-600 mb-3">
                 모든 점검항목을 체크한 후 저장할 수 있습니다.
               </p>
             )}
-
-            {checklistItems.map((item, index) => (
-              <FormField
-                key={index}
-                label={`항목 ${index + 1}`}
-                layout="horizontal"
-              >
-                <div className="text-sm text-gray-700 mb-2">
-                  {item.check_item}
-                  {item.check_std && (
-                    <span className="text-xs text-gray-400 ml-2">
-                      기준: {item.check_std}
-                    </span>
-                  )}
+            <div className="space-y-3">
+              {checklistItems.map((item, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-[110px_1fr] gap-3 items-start"
+                >
+                  <div className="text-xs font-medium text-gray-400 uppercase tracking-wide pt-1">
+                    항목 {index + 1}
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-700 mb-1.5">
+                      {item.check_item}
+                      {item.check_std && (
+                        <span className="text-xs text-gray-400 ml-2">
+                          기준: {item.check_std}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {(['OK', 'ACTION_NEEDED', 'REPLACED'] as const).map((val) => (
+                        <label key={val} className="inline-flex items-center gap-1.5 text-sm cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`check_result_${index}`}
+                            value={val}
+                            checked={item.check_result === val}
+                            onChange={() => handleCheckResultChange(index, val)}
+                            className="accent-cyan-accent"
+                          />
+                          {val === 'OK' ? '양호' : val === 'ACTION_NEEDED' ? '조치필요' : '교체'}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  {(['OK', 'ACTION_NEEDED', 'REPLACED'] as const).map((val) => (
-                    <label key={val} className="inline-flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name={`check_result_${index}`}
-                        value={val}
-                        checked={item.check_result === val}
-                        onChange={() => handleCheckResultChange(index, val)}
-                        className="accent-cyan-accent"
-                      />
-                      {val === 'OK' ? '양호' : val === 'ACTION_NEEDED' ? '조치필요' : '교체'}
-                    </label>
-                  ))}
-                </div>
-              </FormField>
-            ))}
-          </>
+              ))}
+            </div>
+          </Section>
         )}
 
         {/* Section: Replaced parts */}
-        <div className="border-b border-gray-100 pb-1 mb-3 mt-6">
-          <span className="text-sm font-medium text-gray-500">교체 부품</span>
-        </div>
-
-        {parts.map((part, index) => (
-          <FormField key={index} label={`부품 ${index + 1}`} layout="horizontal">
-            <div className="flex gap-2 items-center">
-              <Input
-                placeholder="부품명"
-                className="flex-[2]"
-                value={part.part_nm}
-                onChange={(e) => updatePart(index, 'part_nm', e.target.value)}
-              />
-              <input
-                type="number"
-                className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
-                placeholder="수량"
-                min={1}
-                value={part.qty ?? ''}
-                onChange={(e) => updatePart(index, 'qty', e.target.value ? Number(e.target.value) : null)}
-              />
-              <input
-                type="number"
-                className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
-                placeholder="비용 (선택)"
-                min={0}
-                value={part.cost ?? ''}
-                onChange={(e) => updatePart(index, 'cost', e.target.value ? Number(e.target.value) : null)}
-              />
-              <Tooltip title="삭제">
-                <Button
-                  variant="danger"
-                  size="small"
-                  icon={<Trash2 className="w-4 h-4" />}
-                  aria-label="부품 행 삭제"
-                  onClick={() => removePart(index)}
-                />
-              </Tooltip>
+        <Section
+          title="교체 부품"
+          action={
+            <Button
+              variant="ghost"
+              onClick={addPart}
+              icon={<Plus className="w-4 h-4" />}
+              size="small"
+            >
+              부품 추가
+            </Button>
+          }
+        >
+          {parts.length === 0 ? (
+            <p className="text-sm text-gray-400">교체된 부품이 없습니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {parts.map((part, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-[110px_1fr] gap-3 items-center"
+                >
+                  <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                    부품 {index + 1}
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      placeholder="부품명"
+                      className="flex-[2]"
+                      value={part.part_nm}
+                      onChange={(e) => updatePart(index, 'part_nm', e.target.value)}
+                    />
+                    <input
+                      type="number"
+                      className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                      placeholder="수량"
+                      min={1}
+                      value={part.qty ?? ''}
+                      onChange={(e) => updatePart(index, 'qty', e.target.value ? Number(e.target.value) : null)}
+                    />
+                    <input
+                      type="number"
+                      className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                      placeholder="비용 (선택)"
+                      min={0}
+                      value={part.cost ?? ''}
+                      onChange={(e) => updatePart(index, 'cost', e.target.value ? Number(e.target.value) : null)}
+                    />
+                    <Tooltip title="삭제">
+                      <Button
+                        variant="danger"
+                        size="small"
+                        icon={<Trash2 className="w-4 h-4" />}
+                        aria-label="부품 행 삭제"
+                        onClick={() => removePart(index)}
+                      />
+                    </Tooltip>
+                  </div>
+                </div>
+              ))}
             </div>
-          </FormField>
-        ))}
-
-        <div className="ml-36 mb-4">
-          <Button
-            variant="ghost"
-            onClick={addPart}
-            icon={<Plus className="w-4 h-4" />}
-            size="small"
-          >
-            + 부품 추가
-          </Button>
-        </div>
+          )}
+        </Section>
 
         {/* Section: Photo attachment */}
-        <div className="border-b border-gray-100 pb-1 mb-3 mt-6">
-          <span className="text-sm font-medium text-gray-500">사진 첨부</span>
-        </div>
-
-        <FormField label="사진" layout="horizontal">
-          <FileUpload
-            refTable="tb_maint_result"
-            refId={createdResultId}
-            accept="image/*"
-            maxCount={5}
-            listType="picture"
-          />
-          {!createdResultId && (
-            <p className="text-xs text-gray-400 mt-1">
-              저장 후 사진이 이력에 연결됩니다.
-            </p>
-          )}
-        </FormField>
+        <Section
+          title="사진 첨부"
+          aside={!createdResultId ? '저장 후 업로드 가능' : undefined}
+        >
+          <Row label="사진">
+            <FileUpload
+              refTable="tb_maint_result"
+              refId={createdResultId}
+              accept="image/*"
+              maxCount={5}
+              listType="picture"
+            />
+          </Row>
+        </Section>
       </div>
     </Modal>
   );
