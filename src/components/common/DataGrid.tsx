@@ -25,6 +25,8 @@ export interface DataGridColumn<T = Record<string, unknown>> {
   fixed?: 'left' | 'right';
   /** 말줄임 처리 */
   ellipsis?: boolean;
+  /** 컬럼 너비 드래그 리사이즈 허용 (기본 true; width가 설정된 컬럼만 적용) */
+  resizable?: boolean;
 }
 
 export type RowSelectionMode = 'single' | 'multiple' | 'none';
@@ -121,6 +123,7 @@ export default function DataGrid<T extends Record<string, unknown> = Record<stri
         fixed: col.fixed,
         ellipsis: col.ellipsis ?? true,
         sorter: col.sorter ?? false,
+        resizable: col.resizable,
         render: col.render,
       })),
     [columns],

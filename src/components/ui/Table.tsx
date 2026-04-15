@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Inbox, ChevronUp, ChevronDown } from 'lucide-react';
 
 /* ── Column Definition ── */
@@ -13,8 +13,13 @@ export interface TableColumn<T = Record<string, unknown>> {
   sorter?: boolean;
   fixed?: 'left' | 'right';
   ellipsis?: boolean;
+  /** 드래그로 컬럼 너비를 조절할 수 있는지. 기본 true (width가 설정된 경우). */
+  resizable?: boolean;
   render?: (value: unknown, record: T, index: number) => React.ReactNode;
 }
+
+/** Minimum column width (px) enforced during drag. */
+const MIN_COL_WIDTH = 40;
 
 /* ── Pagination ── */
 export interface PaginationConfig {
@@ -69,6 +74,71 @@ export default function Table<T extends Record<string, unknown> = Record<string,
   title,
   summary,
 }: TableProps<T>) {
+  /* ── Column resize state ── */
+  // Tracks user-dragged overrides. Key: col.key || col.dataIndex.
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  // Active drag session — stored in a ref so the mouse listeners don't
+  // trigger re-renders until we actually commit a width change.
+  const dragRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null);
+
+  const colKeyOf = useCallback(
+    (col: TableColumn<T>) => col.key ?? col.dataIndex,
+    [],
+  );
+
+  const widthOf = useCallback(
+    (col: TableColumn<T>): number | string | undefined => {
+      const key = colKeyOf(col);
+      if (colWidths[key] !== undefined) return colWidths[key];
+      return col.width;
+    },
+    [colWidths, colKeyOf],
+  );
+
+  const isResizable = useCallback(
+    (col: TableColumn<T>) => col.resizable !== false && col.width !== undefined,
+    [],
+  );
+
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLSpanElement>, col: TableColumn<T>) => {
+      e.preventDefault();
+      e.stopPropagation(); // prevent th onClick (sort)
+      const key = colKeyOf(col);
+      // Fall back to a sensible default when width is a non-numeric
+      // string (e.g. '20%') — once the user drags, the column becomes
+      // a numeric px width.
+      const starting =
+        colWidths[key] ??
+        (typeof col.width === 'number' ? col.width : 120);
+      dragRef.current = { key, startX: e.clientX, startWidth: starting };
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    },
+    [colKeyOf, colWidths],
+  );
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragRef.current) return;
+      const { key, startX, startWidth } = dragRef.current;
+      const next = Math.max(MIN_COL_WIDTH, startWidth + (e.clientX - startX));
+      setColWidths((prev) => (prev[key] === next ? prev : { ...prev, [key]: next }));
+    };
+    const onUp = () => {
+      if (!dragRef.current) return;
+      dragRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
   const handleSort = (field: string) => {
     if (!onSortChange) return;
     if (sortBy === field) {
@@ -115,11 +185,11 @@ export default function Table<T extends Record<string, unknown> = Record<string,
                 <th
                   key={col.key || col.dataIndex}
                   className={`
-                    bg-dark-700 px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider
+                    relative bg-dark-700 px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider
                     ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'}
                     ${col.sorter ? 'cursor-pointer select-none hover:text-gray-600' : ''}
                   `}
-                  style={{ width: col.width }}
+                  style={{ width: widthOf(col) }}
                   onClick={col.sorter ? () => handleSort(col.dataIndex) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -128,6 +198,14 @@ export default function Table<T extends Record<string, unknown> = Record<string,
                       sortOrder === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
                     )}
                   </span>
+                  {isResizable(col) && (
+                    <span
+                      role="separator"
+                      aria-orientation="vertical"
+                      onMouseDown={(e) => handleResizeMouseDown(e, col)}
+                      className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-cyan-accent/40 active:bg-cyan-accent/60"
+                    />
+                  )}
                 </th>
               ))}
             </tr>
@@ -183,7 +261,7 @@ export default function Table<T extends Record<string, unknown> = Record<string,
                             ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'}
                             ${col.ellipsis ? 'truncate max-w-0' : ''}
                           `}
-                          style={{ width: col.width }}
+                          style={{ width: widthOf(col) }}
                         >
                           {col.render ? col.render(value, record, rowIdx) : (value as React.ReactNode)}
                         </td>
