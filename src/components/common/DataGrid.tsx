@@ -82,7 +82,11 @@ export interface DataGridProps<T extends Record<string, unknown> = Record<string
   onRow?: (record: T, index?: number) => React.HTMLAttributes<HTMLElement>;
   /** bordered — disabled by default (No-Line rule) */
   bordered?: boolean;
-  /** localStorage 에 사용자가 드래그한 컬럼 너비를 저장할 키. 페이지 단위 unique 권장 (예: 'preventive-maint-grid'). */
+  /**
+   * localStorage 에 사용자가 드래그한 컬럼 너비를 저장할 키.
+   * 명명 컨벤션: `<도메인>-<페이지>[-<그리드>]` (예: `preventive-maint-grid`, `shipment-process-list`).
+   * 키를 변경하면 기존 사용자의 저장된 너비가 유실되므로 추후 수정 시 주의.
+   */
   storageKey?: string;
 }
 

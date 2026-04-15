@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Inbox, ChevronUp, ChevronDown } from 'lucide-react';
+import { Inbox, ChevronUp, ChevronDown, RotateCcw } from 'lucide-react';
 
 /* ── Column Definition ── */
 export interface TableColumn<T = Record<string, unknown>> {
@@ -190,9 +190,40 @@ export default function Table<T extends Record<string, unknown> = Record<string,
     }
   };
 
+  const hasWidthOverrides = Object.keys(colWidths).length > 0;
+  const resetWidths = useCallback(() => {
+    setColWidths({});
+    if (storageKey && typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem(WIDTH_STORAGE_PREFIX + storageKey);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [storageKey]);
+
   return (
     <div className="relative">
-      {title && <h3 className="text-base font-semibold text-gray-700 mb-3">{title}</h3>}
+      {(title || hasWidthOverrides) && (
+        <div className="flex items-center justify-between mb-3">
+          {title ? (
+            <h3 className="text-base font-semibold text-gray-700">{title}</h3>
+          ) : (
+            <span />
+          )}
+          {hasWidthOverrides && (
+            <button
+              type="button"
+              onClick={resetWidths}
+              title="열 너비 초기화"
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-cyan-accent hover:bg-dark-700 rounded transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              열 너비 초기화
+            </button>
+          )}
+        </div>
+      )}
 
       {loading && (
         <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10 rounded-lg">
