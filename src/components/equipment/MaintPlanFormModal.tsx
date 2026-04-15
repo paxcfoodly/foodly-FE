@@ -29,7 +29,7 @@ interface EquipmentOption {
 }
 
 interface WorkerOption {
-  worker_id: number;
+  worker_id: string;
   worker_nm: string;
 }
 
@@ -272,9 +272,14 @@ export default function MaintPlanFormModal({
           <Select
             placeholder="담당자 선택"
             value={(formValues.assignee_id as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, assignee_id: e.target.value ? Number(e.target.value) : undefined }))}
+            onChange={(e) =>
+              setFormValues((prev) => ({
+                ...prev,
+                assignee_id: e.target.value || undefined,
+              }))
+            }
             options={workers.map((w) => ({
-              label: w.worker_nm,
+              label: `${w.worker_id} - ${w.worker_nm}`,
               value: w.worker_id,
             }))}
           />
