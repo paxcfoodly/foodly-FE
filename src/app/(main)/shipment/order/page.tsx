@@ -168,7 +168,7 @@ export default function ShipmentOrderPage() {
         <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={handleCreate}>출하지시 등록</Button>
         <ExcelDownloadButton filename="출하지시목록" columns={EXCEL_COLUMNS} data={getExcelData} />
       </div>
-      <DataGrid<Shipment> columns={COLUMNS} dataSource={shipments} rowKey="ship_id" loading={loading} page={page} pageSize={pageSize} total={total} onPageChange={handlePageChange} scrollX={1200}
+      <DataGrid<Shipment> storageKey="shipment-order" columns={COLUMNS} dataSource={shipments} rowKey="ship_id" loading={loading} page={page} pageSize={pageSize} total={total} onPageChange={handlePageChange} scrollX={1200}
         emptyText="출하지시 없음 — 등록된 출하지시가 없습니다. 출하지시 등록 버튼을 눌러 시작하세요." onRow={(record) => ({ onClick: () => handleView(record), style: { cursor: 'pointer' } })} />
 
       <FormModal<Record<string, unknown>> open={modalOpen} onClose={handleModalClose} onSubmit={handleSubmit} mode={modalMode} initialValues={modalInitialValues as Record<string, unknown> | undefined}

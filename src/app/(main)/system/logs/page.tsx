@@ -284,7 +284,7 @@ export default function AuditLogsPage() {
       />
 
       {/* 데이터 그리드 */}
-      <DataGrid<AuditLogRow>
+      <DataGrid<AuditLogRow> storageKey="system-logs"
         columns={columns}
         dataSource={dataSource}
         rowKey="log_id"

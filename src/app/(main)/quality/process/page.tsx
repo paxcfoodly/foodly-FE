@@ -275,7 +275,7 @@ export default function ProcessInspectionPage() {
       </div>
 
       {/* Data grid */}
-      <DataGrid<InspectResult>
+      <DataGrid<InspectResult> storageKey="quality-process"
         columns={COLUMNS}
         dataSource={data}
         rowKey="inspect_result_id"

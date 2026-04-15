@@ -102,7 +102,7 @@ export default function ShipmentProcessPage() {
   return (
     <div className="px-6 py-4">
       <SearchForm fields={SEARCH_FIELDS} onSearch={handleSearch} onReset={handleReset} loading={loading} />
-      <DataGrid<Shipment> columns={TOP_COLUMNS} dataSource={shipments} rowKey="ship_id" loading={loading} page={page} pageSize={pageSize} total={total} onPageChange={handlePageChange} scrollX={800}
+      <DataGrid<Shipment> storageKey="shipment-process-list" columns={TOP_COLUMNS} dataSource={shipments} rowKey="ship_id" loading={loading} page={page} pageSize={pageSize} total={total} onPageChange={handlePageChange} scrollX={800}
         emptyText="처리 대상 없음 — 출하확정 대기 중인 출하지시가 없습니다." onRow={(record) => ({ onClick: () => handleRowClick(record), style: { cursor: 'pointer', background: selectedShipment?.ship_id === record.ship_id ? '#e6f4ff' : undefined } })} />
 
       <div className="mt-6">
@@ -115,7 +115,7 @@ export default function ShipmentProcessPage() {
         </div>
 
         {selectedShipment ? (
-          <DataGrid<ShipmentDetail> columns={DETAIL_COLUMNS} dataSource={selectedShipment.details ?? []} rowKey="ship_dtl_id" selectionMode="multiple" selectedRowKeys={selectedRowKeys} onSelectionChange={handleDetailSelectionChange} scrollX={800} emptyText="LOT 정보가 없습니다." />
+          <DataGrid<ShipmentDetail> storageKey="shipment-process-detail" columns={DETAIL_COLUMNS} dataSource={selectedShipment.details ?? []} rowKey="ship_dtl_id" selectionMode="multiple" selectedRowKeys={selectedRowKeys} onSelectionChange={handleDetailSelectionChange} scrollX={800} emptyText="LOT 정보가 없습니다." />
         ) : (
           <div className="py-8 text-center text-gray-400 bg-dark-700 rounded-lg border border-dashed border-gray-300">위 목록에서 출하지시를 선택하면 LOT 목록이 표시됩니다.</div>
         )}

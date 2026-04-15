@@ -318,7 +318,7 @@ export default function NoticePage() {
       />
 
       {/* 데이터 그리드 */}
-      <DataGrid<NoticeRow>
+      <DataGrid<NoticeRow> storageKey="system-notice"
         columns={columns}
         dataSource={dataSource}
         rowKey="notice_id"

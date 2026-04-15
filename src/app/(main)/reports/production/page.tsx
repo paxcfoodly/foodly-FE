@@ -369,7 +369,7 @@ export default function ProductionReportPage() {
             />
           </div>
         </div>
-        <DataGrid
+        <DataGrid storageKey="reports-production-summary"
           columns={summaryColumns}
           dataSource={summaryData as unknown as Record<string, unknown>[]}
           rowKey="group_key"

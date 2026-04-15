@@ -246,7 +246,7 @@ export default function EquipmentOperationPage() {
 
       {/* Equipment list */}
       <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
-        <DataGrid<EquipmentRow>
+        <DataGrid<EquipmentRow> storageKey="equipment-operation-list"
           columns={equipColumns}
           dataSource={equipList}
           rowKey="equip_cd"
@@ -285,7 +285,7 @@ export default function EquipmentOperationPage() {
               endDate={endDate}
             />
           </div>
-          <DataGrid<StatusHistoryRow>
+          <DataGrid<StatusHistoryRow> storageKey="equipment-operation-history"
             columns={historyColumns}
             dataSource={historyList}
             rowKey="status_id"

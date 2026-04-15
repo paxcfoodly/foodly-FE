@@ -390,7 +390,7 @@ export default function UsersPage() {
       />
 
       {/* 데이터 그리드 */}
-      <DataGrid<UserRow>
+      <DataGrid<UserRow> storageKey="system-users"
         columns={columns}
         dataSource={dataSource}
         rowKey="user_id"

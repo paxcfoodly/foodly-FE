@@ -350,7 +350,7 @@ export default function DefectPage() {
       </div>
 
       {/* Data Grid */}
-      <DataGrid<DefectRow>
+      <DataGrid<DefectRow> storageKey="quality-defect"
         columns={columns}
         dataSource={defects}
         rowKey="defect_id"

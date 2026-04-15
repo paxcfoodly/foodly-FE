@@ -342,7 +342,7 @@ export default function MoldMasterPage() {
         <PermissionButton action="create" menuUrl={MENU_URL} variant="primary" icon={<Plus className="w-4 h-4" />} onClick={handleCreate}>금형 등록</PermissionButton>
       </div>
 
-      <DataGrid<MoldRow>
+      <DataGrid<MoldRow> storageKey="equipment-mold"
         columns={columns}
         dataSource={items}
         rowKey="mold_cd"

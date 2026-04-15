@@ -250,7 +250,7 @@ export default function ShippingInspectionPage() {
       </div>
 
       {/* Data grid */}
-      <DataGrid<InspectResult>
+      <DataGrid<InspectResult> storageKey="quality-shipping"
         columns={COLUMNS}
         dataSource={data}
         rowKey="inspect_result_id"
