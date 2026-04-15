@@ -6,7 +6,7 @@ import Tag from '@/components/ui/Tag';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Switch from '@/components/ui/Switch';
 import Table from '@/components/ui/Table';
 import Empty from '@/components/ui/Empty';
@@ -306,31 +306,31 @@ export default function NotificationsPage() {
           </div>
         }
       >
-        <div className="space-y-4">
-          <FormField label="알림유형" required>
+        <Section title="알림 규칙">
+          <Row label="알림유형" required>
             <CommonCodeSelect
               groupCd="NOTI_TYPE"
               placeholder="알림유형 선택"
               value={formValues.event_type}
               onChange={(e) => setFormValues((prev) => ({ ...prev, event_type: e.target.value }))}
             />
-          </FormField>
-          <FormField label="수신자 역할" required>
+          </Row>
+          <Row label="수신자 역할" required>
             <Select
               placeholder="역할 선택"
               options={roleOptions}
               value={formValues.target_role_cd}
               onChange={(e) => setFormValues((prev) => ({ ...prev, target_role_cd: e.target.value }))}
             />
-          </FormField>
-          <FormField label="채널" required>
+          </Row>
+          <Row label="채널" required>
             <Select
               options={CHANNEL_OPTIONS}
               value={formValues.channel}
               onChange={(e) => setFormValues((prev) => ({ ...prev, channel: e.target.value }))}
             />
-          </FormField>
-        </div>
+          </Row>
+        </Section>
       </Modal>
     </>
   );

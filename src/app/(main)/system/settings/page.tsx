@@ -7,6 +7,7 @@ import Input from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Modal from '@/components/ui/Modal';
 import Table from '@/components/ui/Table';
 import Tabs from '@/components/ui/Tabs';
@@ -236,14 +237,14 @@ function NumberingTab() {
           </div>
         }
       >
-        <div className="space-y-4">
-          <FormField label="접두어">
+        <Section title="채번규칙">
+          <Row label="접두어">
             <Input
               value={editForm.prefix}
               onChange={(e) => setEditForm((prev) => ({ ...prev, prefix: e.target.value }))}
             />
-          </FormField>
-          <FormField label="자릿수" required>
+          </Row>
+          <Row label="자릿수" required>
             <input
               type="number"
               min={1}
@@ -253,8 +254,8 @@ function NumberingTab() {
               value={editForm.seq_length}
               onChange={(e) => setEditForm((prev) => ({ ...prev, seq_length: Number(e.target.value) }))}
             />
-          </FormField>
-        </div>
+          </Row>
+        </Section>
       </Modal>
     </>
   );

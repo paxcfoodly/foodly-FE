@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Spinner from '@/components/ui/Spinner';
 import Table from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
@@ -475,8 +475,8 @@ export default function RolesPage() {
         width={480}
       >
         {(form, mode) => (
-          <>
-            <FormField label="역할코드" required>
+          <Section title="역할 정보">
+            <Row label="역할코드" required>
               <Input
                 name="role_cd"
                 placeholder="예: SYS_ADMIN"
@@ -488,9 +488,8 @@ export default function RolesPage() {
                 value={(form.getFieldsValue().role_cd as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ role_cd: e.target.value } as Partial<RoleFormValues>)}
               />
-            </FormField>
-
-            <FormField label="역할명" required>
+            </Row>
+            <Row label="역할명" required>
               <Input
                 name="role_nm"
                 placeholder="역할명"
@@ -499,9 +498,8 @@ export default function RolesPage() {
                 value={(form.getFieldsValue().role_nm as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ role_nm: e.target.value } as Partial<RoleFormValues>)}
               />
-            </FormField>
-
-            <FormField label="설명">
+            </Row>
+            <Row label="설명">
               <Textarea
                 name="role_desc"
                 placeholder="역할 설명"
@@ -510,10 +508,9 @@ export default function RolesPage() {
                 value={(form.getFieldsValue().role_desc as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ role_desc: e.target.value } as Partial<RoleFormValues>)}
               />
-            </FormField>
-
+            </Row>
             {mode === 'edit' && (
-              <FormField label="사용여부">
+              <Row label="사용여부">
                 <Select
                   name="use_yn"
                   value={(form.getFieldsValue().use_yn as string) ?? ''}
@@ -523,9 +520,9 @@ export default function RolesPage() {
                     { label: '미사용', value: 'N' },
                   ]}
                 />
-              </FormField>
+              </Row>
             )}
-          </>
+          </Section>
         )}
       </FormModal>
 

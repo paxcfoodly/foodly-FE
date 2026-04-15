@@ -7,7 +7,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Spinner from '@/components/ui/Spinner';
 import Table from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
@@ -436,8 +436,8 @@ export default function CommonCodesPage() {
         width={440}
       >
         {(form, mode) => (
-          <>
-            <FormField label="그룹코드" required>
+          <Section title="코드그룹 정보">
+            <Row label="그룹코드" required>
               <Input
                 name="group_cd"
                 placeholder="예: ITEM_TYPE"
@@ -449,8 +449,8 @@ export default function CommonCodesPage() {
                 value={(form.getFieldsValue().group_cd as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ group_cd: e.target.value } as Partial<GroupFormValues>)}
               />
-            </FormField>
-            <FormField label="그룹명" required>
+            </Row>
+            <Row label="그룹명" required>
               <Input
                 name="group_nm"
                 placeholder="그룹명"
@@ -459,9 +459,9 @@ export default function CommonCodesPage() {
                 value={(form.getFieldsValue().group_nm as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ group_nm: e.target.value } as Partial<GroupFormValues>)}
               />
-            </FormField>
+            </Row>
             {mode === 'edit' && (
-              <FormField label="사용여부">
+              <Row label="사용여부">
                 <Select
                   name="use_yn"
                   value={(form.getFieldsValue().use_yn as string) ?? ''}
@@ -471,9 +471,9 @@ export default function CommonCodesPage() {
                     { label: '미사용', value: 'N' },
                   ]}
                 />
-              </FormField>
+              </Row>
             )}
-          </>
+          </Section>
         )}
       </FormModal>
 
@@ -491,8 +491,8 @@ export default function CommonCodesPage() {
         width={440}
       >
         {(form, mode) => (
-          <>
-            <FormField label="코드" required>
+          <Section title="코드 정보">
+            <Row label="코드" required>
               <Input
                 name="code"
                 placeholder="코드값"
@@ -502,8 +502,8 @@ export default function CommonCodesPage() {
                 value={(form.getFieldsValue().code as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ code: e.target.value } as Partial<CodeFormValues>)}
               />
-            </FormField>
-            <FormField label="코드명" required>
+            </Row>
+            <Row label="코드명" required>
               <Input
                 name="code_nm"
                 placeholder="코드명"
@@ -512,8 +512,8 @@ export default function CommonCodesPage() {
                 value={(form.getFieldsValue().code_nm as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ code_nm: e.target.value } as Partial<CodeFormValues>)}
               />
-            </FormField>
-            <FormField label="정렬순서">
+            </Row>
+            <Row label="정렬순서">
               <input
                 type="number"
                 name="sort_order"
@@ -524,9 +524,9 @@ export default function CommonCodesPage() {
                 value={(form.getFieldsValue().sort_order as number) ?? ''}
                 onChange={(e) => form.setFieldsValue({ sort_order: e.target.value ? Number(e.target.value) : undefined } as Partial<CodeFormValues>)}
               />
-            </FormField>
+            </Row>
             {mode === 'edit' && (
-              <FormField label="사용여부">
+              <Row label="사용여부">
                 <Select
                   name="use_yn"
                   value={(form.getFieldsValue().use_yn as string) ?? ''}
@@ -536,9 +536,9 @@ export default function CommonCodesPage() {
                     { label: '미사용', value: 'N' },
                   ]}
                 />
-              </FormField>
+              </Row>
             )}
-          </>
+          </Section>
         )}
       </FormModal>
 
