@@ -56,15 +56,9 @@ function buildColumns(
 ): DataGridColumn<MaintPlan>[] {
   return [
     {
-      title: '보전번호',
-      dataIndex: 'maint_plan_id',
-      width: 90,
-      align: 'center',
-    },
-    {
       title: '설비명',
       dataIndex: 'equipment',
-      width: 150,
+      width: 110,
       ellipsis: true,
       render: (val: unknown) => {
         const eq = val as { equip_nm?: string } | null;
@@ -72,9 +66,19 @@ function buildColumns(
       },
     },
     {
-      title: '보전유형',
+      title: '점검일',
+      dataIndex: 'next_plan_date',
+      width: 100,
+      align: 'center',
+      render: (val: unknown) => {
+        if (!val) return '-';
+        return String(val).slice(0, 10);
+      },
+    },
+    {
+      title: '유형',
       dataIndex: 'maint_type_cd',
-      width: 90,
+      width: 70,
       align: 'center',
       render: (val: unknown) => {
         const code = val as string | undefined;
@@ -83,41 +87,22 @@ function buildColumns(
       },
     },
     {
-      title: '점검일',
-      dataIndex: 'next_plan_date',
-      width: 110,
-      align: 'center',
-      render: (val: unknown) => {
-        if (!val) return '-';
-        return String(val).slice(0, 10);
-      },
-    },
-    {
-      title: '주기',
-      dataIndex: 'cycle_type',
-      width: 80,
-      align: 'center',
-      render: (val: unknown) => {
-        const cycle = val as string | undefined;
-        return cycle ? (CYCLE_TYPE_LABELS[cycle] ?? cycle) : '-';
-      },
-    },
-    {
       title: '담당자',
       dataIndex: 'assignee',
-      width: 100,
+      width: 90,
       render: (val: unknown) => {
         const assignee = val as { worker_nm?: string } | null;
         return assignee?.worker_nm ?? '-';
       },
     },
     {
-      title: '완료여부',
+      title: '상태',
       dataIndex: 'next_plan_date',
-      width: 90,
+      key: 'status',
+      width: 80,
       align: 'center',
       render: (val: unknown) => {
-        const dateStr = val as string | undefined;
+        const dateStr = val ? String(val).slice(0, 10) : undefined;
         if (!dateStr) return <Badge status="default" text="미설정" />;
         const isDue = dateStr <= today;
         return isDue ? (
@@ -133,7 +118,7 @@ function buildColumns(
       width: 110,
       align: 'center',
       render: (_val: unknown, record: MaintPlan) => {
-        const dateStr = record.next_plan_date;
+        const dateStr = record.next_plan_date ? String(record.next_plan_date).slice(0, 10) : undefined;
         const isDue = dateStr ? dateStr <= today : false;
         return (
           <Button
@@ -441,7 +426,7 @@ export default function PreventivePage() {
             total={total}
             onPageChange={handlePageChange}
             emptyText="등록된 보전계획이 없습니다. 보전계획 등록 버튼을 눌러 첫 일정을 추가해주세요."
-            scrollX={800}
+            scrollX={560}
             onRow={(record) => ({
               onDoubleClick: () => handleRowDoubleClick(record),
               style: { cursor: 'pointer' },
@@ -465,7 +450,7 @@ export default function PreventivePage() {
         ) : (
           <div className="space-y-3">
             {selectedDatePlans.map((item) => {
-              const isDue = item.next_plan_date <= today;
+              const isDue = String(item.next_plan_date).slice(0, 10) <= today;
               return (
                 <div key={item.maint_plan_id} className="border-b border-gray-100 pb-3">
                   <div className="font-medium">{item.plan_nm}</div>

@@ -102,14 +102,19 @@ export default function MaintenanceCalendar({
     onMonthChange?.(start, end);
   }, [currentMonth, onMonthChange]);
 
+  // Backend returns next_plan_date as a full ISO datetime
+  // (`2026-04-15T00:00:00.000Z`); normalize to YYYY-MM-DD before
+  // comparing to the per-cell date string.
+  const planDate = useCallback((p: MaintPlanCalendarItem) => String(p.next_plan_date).slice(0, 10), []);
+
   /* Handle date cell click */
   const handleDateClick = useCallback(
     (date: dayjs.Dayjs) => {
       const dateStr = date.format('YYYY-MM-DD');
-      const dayPlans = plans.filter((p) => p.next_plan_date === dateStr);
+      const dayPlans = plans.filter((p) => planDate(p) === dateStr);
       onDateSelect(dateStr, dayPlans);
     },
-    [plans, onDateSelect],
+    [plans, planDate, onDateSelect],
   );
 
   return (
@@ -152,7 +157,7 @@ export default function MaintenanceCalendar({
         <div className="grid grid-cols-7 gap-px">
           {calendarDays.map((item, idx) => {
             const dateStr = item.date.format('YYYY-MM-DD');
-            const dayPlans = plans.filter((p) => p.next_plan_date === dateStr);
+            const dayPlans = plans.filter((p) => planDate(p) === dateStr);
             const isToday = dateStr === todayStr;
             const isOverdue = dateStr < todayStr && dayPlans.length > 0;
             const isWeekend = item.date.day() === 0 || item.date.day() === 6;
