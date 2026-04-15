@@ -90,14 +90,14 @@ export default function QualityReportPage() {
   const fetchAll = useCallback(async (start: string, end: string, defectType?: string) => {
     setLoading(true);
     try {
-      const detailParams: Record<string, string> = { start, end };
-      if (defectType) detailParams.defect_type_cd = defectType;
+      const params: Record<string, string> = { start, end };
+      if (defectType) params.defect_type_cd = defectType;
 
       const [paretoRes, processRes, trendRes, detailRes] = await Promise.all([
-        apiClient.get('/v1/reports/quality/pareto', { params: { start, end } }),
-        apiClient.get('/v1/reports/quality/by-process', { params: { start, end } }),
-        apiClient.get('/v1/reports/quality/trend', { params: { start, end } }),
-        apiClient.get('/v1/reports/quality/detail', { params: detailParams }),
+        apiClient.get('/v1/reports/quality/pareto', { params }),
+        apiClient.get('/v1/reports/quality/by-process', { params }),
+        apiClient.get('/v1/reports/quality/trend', { params }),
+        apiClient.get('/v1/reports/quality/detail', { params }),
       ]);
 
       setParetoData(paretoRes.data.data ?? []);
