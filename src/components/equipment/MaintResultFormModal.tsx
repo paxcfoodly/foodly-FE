@@ -103,14 +103,28 @@ export default function MaintResultFormModal({
     setCreatedResultId(undefined);
 
     if (plan) {
-      const planDtls = (plan.plan_dtls as Array<Record<string, unknown>>) ?? [];
-      const items: ChecklistItem[] = planDtls.map((dtl) => ({
-        plan_dtl_id: dtl.plan_dtl_id as number | undefined,
-        check_item: dtl.check_item as string,
-        check_std: dtl.check_std as string | undefined,
-        check_result: undefined,
-      }));
-      setChecklistItems(items);
+      // 목록 API 가 plan_dtls 를 plan_dtl_id 만 반환하므로 체크리스트 전체를 별도 조회
+      const planId = plan.maint_plan_id as number | undefined;
+      if (planId) {
+        apiClient
+          .get(`/v1/maint-plans/${planId}`)
+          .then((res) => {
+            const full = res.data?.data ?? {};
+            const planDtls = (full.plan_dtls as Array<Record<string, unknown>>) ?? [];
+            const items: ChecklistItem[] = planDtls
+              .filter((dtl) => typeof dtl.check_item === 'string' && (dtl.check_item as string).trim() !== '')
+              .map((dtl) => ({
+                plan_dtl_id: dtl.plan_dtl_id as number | undefined,
+                check_item: dtl.check_item as string,
+                check_std: dtl.check_std as string | undefined,
+                check_result: undefined,
+              }));
+            setChecklistItems(items);
+          })
+          .catch(() => setChecklistItems([]));
+      } else {
+        setChecklistItems([]);
+      }
 
       setFormValues({
         equip_cd: plan.equip_cd,
@@ -201,12 +215,14 @@ export default function MaintResultFormModal({
           qty: p.qty ?? 1,
           cost: p.cost ?? undefined,
         })),
-        checklist_results: checklistItems.map((item) => ({
-          plan_dtl_id: item.plan_dtl_id,
-          check_item: item.check_item,
-          check_result: item.check_result ?? 'OK',
-          memo: '',
-        })),
+        checklist_results: checklistItems
+          .filter((item) => item.check_item && item.check_item.trim() !== '')
+          .map((item) => ({
+            plan_dtl_id: item.plan_dtl_id,
+            check_item: item.check_item,
+            check_result: item.check_result ?? 'OK',
+            memo: '',
+          })),
       };
 
       const res = await apiClient.post('/v1/maint-results', body);
@@ -365,49 +381,48 @@ export default function MaintResultFormModal({
         {/* Section: Checklist results */}
         {checklistItems.length > 0 && (
           <>
-            <div className="border-b border-gray-100 pb-1 mb-3 mt-6">
-              <span className="text-sm font-medium text-gray-500">
-                점검항목 체크 <span className="text-xs text-gray-400">(모든 항목 필수)</span>
-              </span>
+            <div className="border-b border-gray-100 pb-1 mb-3 mt-6 flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-500">점검항목 체크</span>
+              <span className="text-xs text-gray-400">모든 항목 필수</span>
             </div>
 
             {!allChecked && (
-              <p className="text-sm text-yellow-600 mb-2">
+              <p className="text-sm text-yellow-600 mb-2 ml-36">
                 모든 점검항목을 체크한 후 저장할 수 있습니다.
               </p>
             )}
 
-            <div className="space-y-3">
-              {checklistItems.map((item, index) => (
-                <div key={index} className="pl-2 border-l-2 border-gray-200 py-1">
-                  <div className="mb-1">
-                    <span className="font-medium text-sm">
-                      {index + 1}. {item.check_item}
+            {checklistItems.map((item, index) => (
+              <FormField
+                key={index}
+                label={`항목 ${index + 1}`}
+                layout="horizontal"
+              >
+                <div className="text-sm text-gray-700 mb-2">
+                  {item.check_item}
+                  {item.check_std && (
+                    <span className="text-xs text-gray-400 ml-2">
+                      기준: {item.check_std}
                     </span>
-                    {item.check_std && (
-                      <span className="text-xs text-gray-400 ml-2">
-                        기준: {item.check_std}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {(['OK', 'ACTION_NEEDED', 'REPLACED'] as const).map((val) => (
-                      <label key={val} className="inline-flex items-center gap-1.5 text-sm cursor-pointer">
-                        <input
-                          type="radio"
-                          name={`check_result_${index}`}
-                          value={val}
-                          checked={item.check_result === val}
-                          onChange={() => handleCheckResultChange(index, val)}
-                          className="accent-cyan-accent"
-                        />
-                        {val === 'OK' ? '양호' : val === 'ACTION_NEEDED' ? '조치필요' : '교체'}
-                      </label>
-                    ))}
-                  </div>
+                  )}
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center gap-4">
+                  {(['OK', 'ACTION_NEEDED', 'REPLACED'] as const).map((val) => (
+                    <label key={val} className="inline-flex items-center gap-1.5 text-sm cursor-pointer">
+                      <input
+                        type="radio"
+                        name={`check_result_${index}`}
+                        value={val}
+                        checked={item.check_result === val}
+                        onChange={() => handleCheckResultChange(index, val)}
+                        className="accent-cyan-accent"
+                      />
+                      {val === 'OK' ? '양호' : val === 'ACTION_NEEDED' ? '조치필요' : '교체'}
+                    </label>
+                  ))}
+                </div>
+              </FormField>
+            ))}
           </>
         )}
 
@@ -417,50 +432,53 @@ export default function MaintResultFormModal({
         </div>
 
         {parts.map((part, index) => (
-          <div key={index} className="flex gap-2 mb-2 items-center">
-            <Input
-              placeholder="부품명"
-              className="flex-[2]"
-              value={part.part_nm}
-              onChange={(e) => updatePart(index, 'part_nm', e.target.value)}
-            />
-            <input
-              type="number"
-              className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
-              placeholder="수량"
-              min={1}
-              value={part.qty ?? ''}
-              onChange={(e) => updatePart(index, 'qty', e.target.value ? Number(e.target.value) : null)}
-            />
-            <input
-              type="number"
-              className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
-              placeholder="비용 (선택)"
-              min={0}
-              value={part.cost ?? ''}
-              onChange={(e) => updatePart(index, 'cost', e.target.value ? Number(e.target.value) : null)}
-            />
-            <Tooltip title="삭제">
-              <Button
-                variant="danger"
-                size="small"
-                icon={<Trash2 className="w-4 h-4" />}
-                aria-label="부품 행 삭제"
-                onClick={() => removePart(index)}
+          <FormField key={index} label={`부품 ${index + 1}`} layout="horizontal">
+            <div className="flex gap-2 items-center">
+              <Input
+                placeholder="부품명"
+                className="flex-[2]"
+                value={part.part_nm}
+                onChange={(e) => updatePart(index, 'part_nm', e.target.value)}
               />
-            </Tooltip>
-          </div>
+              <input
+                type="number"
+                className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                placeholder="수량"
+                min={1}
+                value={part.qty ?? ''}
+                onChange={(e) => updatePart(index, 'qty', e.target.value ? Number(e.target.value) : null)}
+              />
+              <input
+                type="number"
+                className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 placeholder-gray-400 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+                placeholder="비용 (선택)"
+                min={0}
+                value={part.cost ?? ''}
+                onChange={(e) => updatePart(index, 'cost', e.target.value ? Number(e.target.value) : null)}
+              />
+              <Tooltip title="삭제">
+                <Button
+                  variant="danger"
+                  size="small"
+                  icon={<Trash2 className="w-4 h-4" />}
+                  aria-label="부품 행 삭제"
+                  onClick={() => removePart(index)}
+                />
+              </Tooltip>
+            </div>
+          </FormField>
         ))}
 
-        <Button
-          variant="ghost"
-          onClick={addPart}
-          icon={<Plus className="w-4 h-4" />}
-          size="small"
-          className="mb-4"
-        >
-          + 부품 추가
-        </Button>
+        <div className="ml-36 mb-4">
+          <Button
+            variant="ghost"
+            onClick={addPart}
+            icon={<Plus className="w-4 h-4" />}
+            size="small"
+          >
+            + 부품 추가
+          </Button>
+        </div>
 
         {/* Section: Photo attachment */}
         <div className="border-b border-gray-100 pb-1 mb-3 mt-6">
