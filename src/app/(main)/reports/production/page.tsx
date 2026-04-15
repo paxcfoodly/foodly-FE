@@ -268,7 +268,7 @@ export default function ProductionReportPage() {
         label: '조회 기간',
         type: 'dateRange' as const,
         defaultValue: dateRange,
-        span: 8,
+        span: 6,
       },
       {
         name: 'group_by',
