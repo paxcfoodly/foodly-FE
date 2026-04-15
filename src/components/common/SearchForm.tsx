@@ -164,11 +164,15 @@ export default function SearchForm({
             />
           );
         case 'dateRange':
+          // min-w-0 + flex-1 permits the native date inputs to shrink below
+          // their intrinsic width (≈180px each) so the pair stays inside
+          // the parent grid cell at narrow viewports instead of spilling
+          // into the next field.
           return (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 min-w-0">
               <input
                 type="date"
-                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700
+                className="flex-1 min-w-0 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700
                   transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
                 placeholder="시작일"
                 value={
@@ -182,7 +186,7 @@ export default function SearchForm({
               <span className="text-gray-400 text-xs shrink-0">~</span>
               <input
                 type="date"
-                className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700
+                className="flex-1 min-w-0 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700
                   transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
                 placeholder="종료일"
                 value={
@@ -213,14 +217,27 @@ export default function SearchForm({
     <div className="rounded-lg p-4 pb-0 mb-4 bg-dark-700">
       <form ref={formRef} onSubmit={(e) => { e.preventDefault(); handleSearch(); }}>
         <div className="grid grid-cols-4 gap-4">
-          {visibleFields.map((field) => (
-            <div key={field.name} className={field.span === 12 ? 'col-span-2' : ''}>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
-                {field.label}
-              </label>
-              {renderField(field)}
-            </div>
-          ))}
+          {visibleFields.map((field) => {
+            // span is expressed on a 24-unit base (legacy AntD convention)
+            // but the grid is 4 columns, so bucket into col-span-1/2/3/4.
+            // min-w-0 lets grid items shrink below content min-size so
+            // dateRange's two date inputs don't overflow into neighbours
+            // at narrow viewports.
+            const span = field.span ?? 6;
+            const colSpan =
+              span >= 18 ? 'col-span-4'
+              : span >= 12 ? 'col-span-2'
+              : span >= 8 ? 'col-span-2'
+              : 'col-span-1';
+            return (
+              <div key={field.name} className={`${colSpan} min-w-0`}>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  {field.label}
+                </label>
+                {renderField(field)}
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex justify-end items-center gap-2 py-3">
