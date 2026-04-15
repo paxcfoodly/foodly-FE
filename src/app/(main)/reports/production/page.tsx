@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import dayjs, { type Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import SearchForm from '@/components/common/SearchForm';
 import DataGrid from '@/components/common/DataGrid';
 import ExcelDownloadButton from '@/components/common/ExcelDownloadButton';
@@ -53,7 +53,14 @@ export default function ProductionReportPage() {
   const defaultEnd = dayjs();
   const defaultStart = defaultEnd.subtract(30, 'day');
 
-  const [dateRange] = useState<[Dayjs, Dayjs]>([defaultStart, defaultEnd]);
+  // Stored as YYYY-MM-DD strings so SearchForm's <input type="date"> can
+  // render them directly and handleSearch can forward them to the BE
+  // without coercion (Dayjs.toString() would become a GMT string the
+  // BE rejects as 400).
+  const [dateRange] = useState<[string, string]>([
+    defaultStart.format('YYYY-MM-DD'),
+    defaultEnd.format('YYYY-MM-DD'),
+  ]);
   const [loading, setLoading] = useState(false);
   const [dailyData, setDailyData] = useState<DailyPoint[]>([]);
   const [summaryData, setSummaryData] = useState<SummaryRow[]>([]);
