@@ -334,6 +334,7 @@ export default function PreventivePage() {
             const axiosErr = err as { response?: { data?: { message?: string } } };
             toast.error(
               axiosErr?.response?.data?.message ?? '삭제에 실패했습니다.',
+              6000,
             );
           }
         },

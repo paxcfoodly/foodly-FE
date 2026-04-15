@@ -38,7 +38,7 @@ interface ReplacedPart {
 }
 
 interface WorkerOption {
-  worker_id: number;
+  worker_id: string;
   worker_nm: string;
 }
 
@@ -318,7 +318,7 @@ export default function MaintResultFormModal({
           <Select
             placeholder="작업자 선택"
             value={(formValues.worker_id as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, worker_id: e.target.value ? Number(e.target.value) : undefined }))}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, worker_id: e.target.value || undefined }))}
             options={workers.map((w) => ({
               label: w.worker_nm,
               value: w.worker_id,
