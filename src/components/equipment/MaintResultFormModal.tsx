@@ -116,6 +116,7 @@ export default function MaintResultFormModal({
         equip_cd: plan.equip_cd,
         maint_type_cd: plan.maint_type_cd,
         work_dt: dayjs().format('YYYY-MM-DD'),
+        worker_id: (plan.assignee_id as string | undefined) ?? undefined,
         cost: undefined,
         memo: '',
       });
