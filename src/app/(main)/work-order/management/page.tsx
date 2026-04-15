@@ -11,7 +11,7 @@ import type { DropdownItem } from '@/components/ui/Dropdown';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
 import FormModal, { type FormModalMode } from '@/components/common/FormModal';
@@ -172,25 +172,26 @@ export default function WorkOrderManagementPage() {
       <Table<WorkOrderRow> columns={columns} dataSource={orders} rowKey="wo_id" loading={loading} pagination={paginationConfig} sortBy={sortField} sortOrder={sortOrder} onSortChange={handleSortChange} scrollX={1400} />
 
       {/* Split Modal */}
-      <Modal title={`작업지시 분할 — ${splitTarget?.wo_no ?? ''}`} open={splitModalOpen} onClose={() => { setSplitModalOpen(false); setSplitTarget(null); }} width={420}
+      <Modal title={`작업지시 분할 — ${splitTarget?.wo_no ?? ''}`} open={splitModalOpen} onClose={() => { setSplitModalOpen(false); setSplitTarget(null); }} width={480}
         footer={<div className="flex items-center gap-2"><Button onClick={() => { setSplitModalOpen(false); setSplitTarget(null); }}>취소</Button><Button variant="primary" loading={splitLoading} onClick={handleSplitSubmit}>분할</Button></div>}>
-        <div className="mb-4 text-gray-500 text-sm">현재 지시수량: <strong>{splitTarget?.order_qty != null ? Number(splitTarget.order_qty).toLocaleString() : '-'}</strong></div>
-        <FormField label="분할 수량" required>
-          <input type="number" min={1} max={splitTarget?.order_qty != null ? Number(splitTarget.order_qty) - 1 : undefined} required
-            className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
-            placeholder="분할할 수량 입력" value={splitQty || ''} onChange={(e) => setSplitQty(Number(e.target.value))} />
-        </FormField>
+        <Section title="분할 정보" aside={`현재 지시수량: ${splitTarget?.order_qty != null ? Number(splitTarget.order_qty).toLocaleString() : '-'}`}>
+          <Row label="분할 수량" required>
+            <input type="number" min={1} max={splitTarget?.order_qty != null ? Number(splitTarget.order_qty) - 1 : undefined} required
+              className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+              placeholder="분할할 수량 입력" value={splitQty || ''} onChange={(e) => setSplitQty(Number(e.target.value))} />
+          </Row>
+        </Section>
       </Modal>
 
       <FormModal<WorkOrderFormValues> open={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSubmit={handleSubmit} mode={modalMode} initialValues={modalInitialValues} title={modalMode === 'create' ? '작업지시 등록' : '작업지시 수정'} width={560}>
         {(_form, _mode) => (
-          <>
-            <FormField label="생산계획"><Select name="plan_id" placeholder="생산계획 선택 (선택사항)" options={[{ label: '선택 안함', value: '' }, ...planOptions.map(o => ({ label: o.label, value: String(o.value) }))]} defaultValue={_form.getFieldsValue().plan_id != null ? String(_form.getFieldsValue().plan_id) : ''} onChange={(e) => _form.setFieldsValue({ plan_id: e.target.value ? Number(e.target.value) : null } as any)} /></FormField>
-            <FormField label="품목" required><Select name="item_cd" placeholder="품목 선택" options={itemOptions} required defaultValue={_form.getFieldsValue().item_cd ?? ''} onChange={(e) => _form.setFieldsValue({ item_cd: e.target.value } as any)} /></FormField>
-            <FormField label="지시수량" required><input type="number" name="order_qty" placeholder="지시수량" min={1} step={1} required className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={_form.getFieldsValue().order_qty ?? ''} onChange={(e) => _form.setFieldsValue({ order_qty: Number(e.target.value) } as any)} /></FormField>
-            <FormField label="우선순위"><input type="number" name="priority" placeholder="우선순위 (1-10)" min={1} max={10} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={_form.getFieldsValue().priority ?? 5} onChange={(e) => _form.setFieldsValue({ priority: Number(e.target.value) } as any)} /></FormField>
-            {_mode === 'edit' && editItem && (<FormField label="상태"><Tag color={STATUS_COLOR[editItem.status] ?? 'default'}>{STATUS_LABEL[editItem.status] ?? editItem.status}</Tag></FormField>)}
-          </>
+          <Section title="작업지시 정보">
+            <Row label="생산계획"><Select name="plan_id" placeholder="생산계획 선택 (선택사항)" options={[{ label: '선택 안함', value: '' }, ...planOptions.map(o => ({ label: o.label, value: String(o.value) }))]} defaultValue={_form.getFieldsValue().plan_id != null ? String(_form.getFieldsValue().plan_id) : ''} onChange={(e) => _form.setFieldsValue({ plan_id: e.target.value ? Number(e.target.value) : null } as any)} /></Row>
+            <Row label="품목" required><Select name="item_cd" placeholder="품목 선택" options={itemOptions} required defaultValue={_form.getFieldsValue().item_cd ?? ''} onChange={(e) => _form.setFieldsValue({ item_cd: e.target.value } as any)} /></Row>
+            <Row label="지시수량" required><input type="number" name="order_qty" placeholder="지시수량" min={1} step={1} required className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={_form.getFieldsValue().order_qty ?? ''} onChange={(e) => _form.setFieldsValue({ order_qty: Number(e.target.value) } as any)} /></Row>
+            <Row label="우선순위"><input type="number" name="priority" placeholder="우선순위 (1-10)" min={1} max={10} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={_form.getFieldsValue().priority ?? 5} onChange={(e) => _form.setFieldsValue({ priority: Number(e.target.value) } as any)} /></Row>
+            {_mode === 'edit' && editItem && (<Row label="상태"><Tag color={STATUS_COLOR[editItem.status] ?? 'default'}>{STATUS_LABEL[editItem.status] ?? editItem.status}</Tag></Row>)}
+          </Section>
         )}
       </FormModal>
     </div>

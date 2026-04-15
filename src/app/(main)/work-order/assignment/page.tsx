@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
 import Table from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
+import { Section } from '@/components/ui/Section';
 import Empty from '@/components/ui/Empty';
 import Tooltip from '@/components/ui/Tooltip';
 import Select from '@/components/ui/Select';
@@ -204,21 +205,22 @@ export default function WorkOrderAssignmentPage() {
       {/* Assign Workers Modal */}
       <Modal title={`작업자 배정 — ${selectedWo?.wo_no ?? ''}`} open={assignModalOpen} onClose={() => setAssignModalOpen(false)} width={520}
         footer={<div className="flex items-center gap-2"><Button onClick={() => setAssignModalOpen(false)}>취소</Button><Button variant="primary" loading={assignSubmitting} onClick={handleAssignSubmit}>배정</Button></div>}>
-        <div className="mb-3 text-gray-500 text-sm">배정할 작업자를 선택하세요. (복수 선택 가능)</div>
-        <div className="space-y-2 max-h-[300px] overflow-y-auto">
-          {enrichedWorkerOptions.map((w) => {
-            const checked = selectedWorkerIds.includes(w.value);
-            return (
-              <label key={w.value} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-dark-700 ${checked ? 'bg-cyan-accent/5' : ''}`}>
-                <input type="checkbox" checked={checked} onChange={() => setSelectedWorkerIds((prev) => prev.includes(w.value) ? prev.filter((id) => id !== w.value) : [...prev, w.value])} className="accent-cyan-accent" />
-                <span className="text-sm">{w.label}</span>
-                {w.avail && w.avail.skills.length > 0 && <Tag color="green">Lv.{w.avail.skills[0].skill_level}</Tag>}
-                {w.avail && w.avail.skills.length === 0 && <Tag color="orange"><AlertTriangle className="w-3 h-3 inline" /> 스킬미보유</Tag>}
-                {w.avail && w.avail.conflicting_wos.map((cwo) => <Tag key={cwo.wo_id} color="red">배정중: {cwo.wo_no}</Tag>)}
-              </label>
-            );
-          })}
-        </div>
+        <Section title="작업자 선택" aside="복수 선택 가능">
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {enrichedWorkerOptions.map((w) => {
+              const checked = selectedWorkerIds.includes(w.value);
+              return (
+                <label key={w.value} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-dark-700 ${checked ? 'bg-cyan-accent/5' : ''}`}>
+                  <input type="checkbox" checked={checked} onChange={() => setSelectedWorkerIds((prev) => prev.includes(w.value) ? prev.filter((id) => id !== w.value) : [...prev, w.value])} className="accent-cyan-accent" />
+                  <span className="text-sm">{w.label}</span>
+                  {w.avail && w.avail.skills.length > 0 && <Tag color="green">Lv.{w.avail.skills[0].skill_level}</Tag>}
+                  {w.avail && w.avail.skills.length === 0 && <Tag color="orange"><AlertTriangle className="w-3 h-3 inline" /> 스킬미보유</Tag>}
+                  {w.avail && w.avail.conflicting_wos.map((cwo) => <Tag key={cwo.wo_id} color="red">배정중: {cwo.wo_no}</Tag>)}
+                </label>
+              );
+            })}
+          </div>
+        </Section>
       </Modal>
     </div>
   );

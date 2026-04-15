@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import DataGrid, { type DataGridColumn } from '@/components/common/DataGrid';
 import ExcelDownloadButton from '@/components/common/ExcelDownloadButton';
 import FormModal from '@/components/common/FormModal';
@@ -174,22 +174,24 @@ export default function ShipmentOrderPage() {
       <FormModal<Record<string, unknown>> open={modalOpen} onClose={handleModalClose} onSubmit={handleSubmit} mode={modalMode} initialValues={modalInitialValues as Record<string, unknown> | undefined}
         title={modalMode === 'create' ? '출하지시 등록' : modalMode === 'edit' ? '출하지시 수정' : '출하지시 상세'} width={720}>
         {(_form, mode) => (
-          <>
-            <FormField label="거래처" required><Input name="cust_cd" placeholder="거래처 코드 입력" disabled={mode === 'view'} required defaultValue={_form.getFieldsValue().cust_cd as string ?? ''} onChange={(e) => _form.setFieldsValue({ cust_cd: e.target.value })} /></FormField>
-            <FormField label="출하예정일" required><input type="date" name="plan_dt" required disabled={mode === 'view'} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15 disabled:opacity-50" defaultValue={_form.getFieldsValue().plan_dt as string ?? ''} onChange={(e) => _form.setFieldsValue({ plan_dt: e.target.value })} /></FormField>
-            <FormField label="비고"><Textarea name="remark" rows={2} placeholder="비고" disabled={mode === 'view'} defaultValue={_form.getFieldsValue().remark as string ?? ''} onChange={(e) => _form.setFieldsValue({ remark: e.target.value })} /></FormField>
-            {mode !== 'view' && (
-              <FormField label="LOT 추가">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Input placeholder="품목 코드" value={addItemCd} onChange={(e) => setAddItemCd(e.target.value)} onBlur={() => fetchEligibleLots(addItemCd)} className="!w-[130px]" />
-                  <Select placeholder="LOT 선택" value={addLotNo ?? ''} onChange={(e) => setAddLotNo(e.target.value)} options={eligibleLots.map((l) => ({ value: l.lot_no, label: `${l.lot_no} (${l.lot_qty})` }))} className="!w-[160px]" />
-                  <input type="number" min={1} value={addOrderQty} onChange={(e) => setAddOrderQty(Number(e.target.value) || 1)} className="w-[100px] h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" placeholder="지시수량" />
-                  <Button onClick={handleAddDetail}>추가</Button>
-                </div>
-              </FormField>
-            )}
-            {(mode !== 'view' ? formDetails.length > 0 : (selectedShipment?.details ?? []).length > 0) && (
-              <div className="mt-2">
+          <div className="space-y-5">
+            <Section title="출하 정보">
+              <Row label="거래처" required><Input name="cust_cd" placeholder="거래처 코드 입력" disabled={mode === 'view'} required defaultValue={_form.getFieldsValue().cust_cd as string ?? ''} onChange={(e) => _form.setFieldsValue({ cust_cd: e.target.value })} /></Row>
+              <Row label="출하예정일" required><input type="date" name="plan_dt" required disabled={mode === 'view'} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15 disabled:opacity-50" defaultValue={_form.getFieldsValue().plan_dt as string ?? ''} onChange={(e) => _form.setFieldsValue({ plan_dt: e.target.value })} /></Row>
+              <Row label="비고"><Textarea name="remark" rows={2} placeholder="비고" disabled={mode === 'view'} defaultValue={_form.getFieldsValue().remark as string ?? ''} onChange={(e) => _form.setFieldsValue({ remark: e.target.value })} /></Row>
+            </Section>
+            <Section title="출하 LOT">
+              {mode !== 'view' && (
+                <Row label="LOT 추가">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Input placeholder="품목 코드" value={addItemCd} onChange={(e) => setAddItemCd(e.target.value)} onBlur={() => fetchEligibleLots(addItemCd)} className="!w-[130px]" />
+                    <Select placeholder="LOT 선택" value={addLotNo ?? ''} onChange={(e) => setAddLotNo(e.target.value)} options={eligibleLots.map((l) => ({ value: l.lot_no, label: `${l.lot_no} (${l.lot_qty})` }))} className="!w-[160px]" />
+                    <input type="number" min={1} value={addOrderQty} onChange={(e) => setAddOrderQty(Number(e.target.value) || 1)} className="w-[100px] h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" placeholder="지시수량" />
+                    <Button onClick={handleAddDetail}>추가</Button>
+                  </div>
+                </Row>
+              )}
+              {(mode !== 'view' ? formDetails.length > 0 : (selectedShipment?.details ?? []).length > 0) ? (
                 <table className="w-full text-sm border-collapse">
                   <thead><tr className="bg-dark-700"><th className={thStyle}>품목</th><th className={thStyle}>LOT번호</th><th className={thStyle}>가용재고</th><th className={thStyle}>지시수량</th>{mode !== 'view' && <th className={thStyle}>삭제</th>}</tr></thead>
                   <tbody>
@@ -199,15 +201,19 @@ export default function ShipmentOrderPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
-          </>
+              ) : (
+                <p className="text-sm text-gray-400">추가된 LOT이 없습니다.</p>
+              )}
+            </Section>
+          </div>
         )}
       </FormModal>
 
       <Modal open={cancelModalOpen} title="취소 요청" width={480} onClose={() => { setCancelModalOpen(false); setCancelReason(''); }}
         footer={<div className="flex items-center gap-2"><Button onClick={() => { setCancelModalOpen(false); setCancelReason(''); }}>취소</Button><Button variant="primary" onClick={handleCancelRequest}>요청</Button></div>}>
-        <FormField label="취소 사유" required><Textarea rows={4} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="취소 사유를 입력하세요" /></FormField>
+        <Section title="취소 요청">
+          <Row label="취소 사유" required><Textarea rows={4} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="취소 사유를 입력하세요" /></Row>
+        </Section>
       </Modal>
     </div>
   );
