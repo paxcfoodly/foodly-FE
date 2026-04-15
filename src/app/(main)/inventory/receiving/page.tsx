@@ -9,7 +9,7 @@ import Modal from '@/components/ui/Modal';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -149,19 +149,31 @@ export default function IncomingPage() {
 
       <FormModal<IncomingFormValues> open={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSubmit={handleSubmit} mode={modalMode} initialValues={{ cust_cd: formCustCd, details: formDetails } as any} title={modalMode === 'create' ? '입고 등록' : '입고 수정'} width={720} layout="vertical">
         {() => (
-          <>
-            <FormField label="거래처" required><Select placeholder="거래처 선택" options={custOptions} required value={formCustCd} onChange={(e) => setFormCustCd(e.target.value)} /></FormField>
-            <div className="mb-2 font-medium text-sm">입고 상세</div>
-            {formDetails.map((d, idx) => (
-              <div key={idx} className="flex items-start gap-2 mb-2">
-                <Select placeholder="품목 선택" options={itemOptions} value={d.item_cd} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], item_cd: e.target.value }; setFormDetails(next); }} className="!w-[220px]" />
-                <Input placeholder="LOT 번호" value={d.lot_no} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], lot_no: e.target.value }; setFormDetails(next); }} className="!w-[140px]" />
-                <input type="number" placeholder="입고수량" min={0.01} step="any" value={d.incoming_qty} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], incoming_qty: Number(e.target.value) }; setFormDetails(next); }} className="w-[120px] h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" />
-                {formDetails.length > 1 && <button onClick={() => setFormDetails(formDetails.filter((_, i) => i !== idx))} className="text-red-500 mt-2"><Minus className="w-4 h-4" /></button>}
-              </div>
-            ))}
-            <Button variant="ghost" block icon={<Plus className="w-4 h-4" />} onClick={() => setFormDetails([...formDetails, { item_cd: '', lot_no: '', incoming_qty: 1 }])} className="border-dashed">상세 추가</Button>
-          </>
+          <div className="space-y-5">
+            <Section title="입고 정보">
+              <Row label="거래처" required><Select placeholder="거래처 선택" options={custOptions} required value={formCustCd} onChange={(e) => setFormCustCd(e.target.value)} /></Row>
+            </Section>
+            <Section
+              title="입고 상세"
+              action={
+                <Button variant="ghost" size="small" icon={<Plus className="w-4 h-4" />} onClick={() => setFormDetails([...formDetails, { item_cd: '', lot_no: '', incoming_qty: 1 }])}>
+                  상세 추가
+                </Button>
+              }
+            >
+              {formDetails.map((d, idx) => (
+                <div key={idx} className="grid grid-cols-[110px_1fr] gap-3 items-center">
+                  <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">상세 {idx + 1}</div>
+                  <div className="flex items-center gap-2">
+                    <Select placeholder="품목 선택" options={itemOptions} value={d.item_cd} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], item_cd: e.target.value }; setFormDetails(next); }} className="flex-[2]" />
+                    <Input placeholder="LOT 번호" value={d.lot_no} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], lot_no: e.target.value }; setFormDetails(next); }} className="flex-1" />
+                    <input type="number" placeholder="입고수량" min={0.01} step="any" value={d.incoming_qty} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], incoming_qty: Number(e.target.value) }; setFormDetails(next); }} className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" />
+                    {formDetails.length > 1 && <button onClick={() => setFormDetails(formDetails.filter((_, i) => i !== idx))} className="text-red-500"><Minus className="w-4 h-4" /></button>}
+                  </div>
+                </div>
+              ))}
+            </Section>
+          </div>
         )}
       </FormModal>
 
@@ -184,7 +196,9 @@ export default function IncomingPage() {
 
       <Modal title={`입고확인 — ${confirmTarget?.incoming_no ?? ''}`} open={confirmOpen} onClose={() => { setConfirmOpen(false); setConfirmTarget(null); }} width={500}
         footer={<div className="flex items-center gap-2"><Button onClick={() => { setConfirmOpen(false); setConfirmTarget(null); }}>취소</Button><Button variant="primary" loading={confirmLoading} onClick={handleConfirmSubmit}>입고확인</Button></div>}>
-        <FormField label="입고 창고" required><Select placeholder="창고 선택" options={whOptions} value={confirmWhCd} onChange={(e) => setConfirmWhCd(e.target.value)} /></FormField>
+        <Section title="입고 확인">
+          <Row label="입고 창고" required><Select placeholder="창고 선택" options={whOptions} value={confirmWhCd} onChange={(e) => setConfirmWhCd(e.target.value)} /></Row>
+        </Section>
       </Modal>
     </div>
   );

@@ -9,7 +9,7 @@ import Modal from '@/components/ui/Modal';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -162,20 +162,32 @@ export default function MaterialIssuePage() {
       <FormModal<IssueFormValues> open={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSubmit={handleSubmit} mode={modalMode}
         initialValues={{ wo_id: editItem?.wo_id, details: formDetails } as any} title={modalMode === 'create' ? '불출요청 등록' : '불출요청 수정'} width={720} layout="vertical">
         {() => (
-          <>
-            <FormField label="작업지시"><Select name="wo_id" placeholder="작업지시 선택 (선택사항)" options={[{ label: '선택 안함', value: '' }, ...woOptions.map(o => ({ label: o.label, value: String(o.value) }))]} value={formWoId} onChange={(e) => setFormWoId(e.target.value)} /></FormField>
-            <div className="mb-2 font-medium text-sm">불출 상세</div>
-            {formDetails.map((d, idx) => (
-              <div key={idx} className="flex items-start gap-2 mb-2">
-                <Select placeholder="품목 선택" options={itemOptions} value={d.item_cd} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], item_cd: e.target.value }; setFormDetails(next); }} className="!w-[220px]" />
-                <Input placeholder="LOT 번호" value={d.lot_no} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], lot_no: e.target.value }; setFormDetails(next); }} className="!w-[140px]" />
-                <input type="number" placeholder="요청수량" min={0.01} step="any" value={d.request_qty} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], request_qty: Number(e.target.value) }; setFormDetails(next); }}
-                  className="w-[120px] h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" />
-                {formDetails.length > 1 && <button onClick={() => setFormDetails(formDetails.filter((_, i) => i !== idx))} className="text-red-500 mt-2"><Minus className="w-4 h-4" /></button>}
-              </div>
-            ))}
-            <Button variant="ghost" block icon={<Plus className="w-4 h-4" />} onClick={() => setFormDetails([...formDetails, { item_cd: '', lot_no: '', request_qty: 1 }])} className="border-dashed">상세 추가</Button>
-          </>
+          <div className="space-y-5">
+            <Section title="불출요청 정보">
+              <Row label="작업지시"><Select name="wo_id" placeholder="작업지시 선택 (선택사항)" options={[{ label: '선택 안함', value: '' }, ...woOptions.map(o => ({ label: o.label, value: String(o.value) }))]} value={formWoId} onChange={(e) => setFormWoId(e.target.value)} /></Row>
+            </Section>
+            <Section
+              title="불출 상세"
+              action={
+                <Button variant="ghost" size="small" icon={<Plus className="w-4 h-4" />} onClick={() => setFormDetails([...formDetails, { item_cd: '', lot_no: '', request_qty: 1 }])}>
+                  상세 추가
+                </Button>
+              }
+            >
+              {formDetails.map((d, idx) => (
+                <div key={idx} className="grid grid-cols-[110px_1fr] gap-3 items-center">
+                  <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">상세 {idx + 1}</div>
+                  <div className="flex items-center gap-2">
+                    <Select placeholder="품목 선택" options={itemOptions} value={d.item_cd} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], item_cd: e.target.value }; setFormDetails(next); }} className="flex-[2]" />
+                    <Input placeholder="LOT 번호" value={d.lot_no} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], lot_no: e.target.value }; setFormDetails(next); }} className="flex-1" />
+                    <input type="number" placeholder="요청수량" min={0.01} step="any" value={d.request_qty} onChange={(e) => { const next = [...formDetails]; next[idx] = { ...next[idx], request_qty: Number(e.target.value) }; setFormDetails(next); }}
+                      className="flex-1 h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" />
+                    {formDetails.length > 1 && <button onClick={() => setFormDetails(formDetails.filter((_, i) => i !== idx))} className="text-red-500"><Minus className="w-4 h-4" /></button>}
+                  </div>
+                </div>
+              ))}
+            </Section>
+          </div>
         )}
       </FormModal>
 
@@ -200,8 +212,10 @@ export default function MaterialIssuePage() {
       {/* Process Modal */}
       <Modal title={`불출처리 — ${processTarget?.issue_no ?? ''}`} open={processOpen} onClose={() => { setProcessOpen(false); setProcessTarget(null); }} width={700}
         footer={<div className="flex items-center gap-2"><Button onClick={() => { setProcessOpen(false); setProcessTarget(null); }}>취소</Button><Button variant="primary" loading={processLoading} onClick={handleProcessSubmit}>불출처리</Button></div>}>
-        <div className="space-y-4">
-          <FormField label="출고 창고" required><Select placeholder="창고 선택" options={whOptions} value={processFormValues.wh_cd} onChange={(e) => setProcessFormValues((p) => ({ ...p, wh_cd: e.target.value }))} /></FormField>
+        <div className="space-y-5">
+          <Section title="불출 처리">
+            <Row label="출고 창고" required><Select placeholder="창고 선택" options={whOptions} value={processFormValues.wh_cd} onChange={(e) => setProcessFormValues((p) => ({ ...p, wh_cd: e.target.value }))} /></Row>
+          </Section>
           <div className="font-medium text-sm mb-2">불출 상세</div>
           <table className="w-full text-sm border-collapse"><thead><tr className="bg-dark-700"><th className="p-2 text-left">품목</th><th className="p-2 text-left">LOT</th><th className="p-2 text-right">요청수량</th><th className="p-2 text-right">불출수량</th></tr></thead>
             <tbody>{(processTarget?.details ?? []).map((d, idx) => (

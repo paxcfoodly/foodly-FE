@@ -10,7 +10,7 @@ import Modal from '@/components/ui/Modal';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -178,14 +178,14 @@ export default function ProdPlanPage() {
 
       <FormModal<ProdPlanFormValues> open={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSubmit={handleSubmit} mode={modalMode} initialValues={modalInitialValues} title={modalMode === 'create' ? '생산계획 등록' : '생산계획 수정'} width={560}>
         {(_form, mode) => (
-          <>
-            <FormField label="공장코드" required><Input name="plant_cd" placeholder="공장코드 입력" disabled={isEditDisabled} required defaultValue={_form.getFieldsValue().plant_cd ?? ''} onChange={(e) => _form.setFieldsValue({ plant_cd: e.target.value } as any)} /></FormField>
-            <FormField label="품목" required><Select name="item_cd" placeholder="품목 선택" options={itemOptions} required disabled={isEditDisabled} defaultValue={_form.getFieldsValue().item_cd ?? ''} onChange={(e) => _form.setFieldsValue({ item_cd: e.target.value } as any)} /></FormField>
-            <FormField label="계획수량" required><input type="number" name="plan_qty" placeholder="계획수량" min={1} step={1} required disabled={isEditDisabled} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15 disabled:opacity-50" defaultValue={_form.getFieldsValue().plan_qty ?? ''} onChange={(e) => _form.setFieldsValue({ plan_qty: Number(e.target.value) } as any)} /></FormField>
-            <FormField label="납기일" required><input type="date" name="due_date" required disabled={isEditDisabled} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15 disabled:opacity-50" defaultValue={_form.getFieldsValue().due_date as string ?? ''} onChange={(e) => _form.setFieldsValue({ due_date: e.target.value } as any)} /></FormField>
-            <FormField label="우선순위"><input type="number" name="priority" placeholder="우선순위 (1-10)" min={1} max={10} disabled={isEditDisabled} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15 disabled:opacity-50" defaultValue={_form.getFieldsValue().priority ?? 5} onChange={(e) => _form.setFieldsValue({ priority: Number(e.target.value) } as any)} /></FormField>
-            {mode === 'edit' && (<FormField label="상태"><Tag color={STATUS_COLOR[editItem?.status ?? ''] ?? 'default'}>{STATUS_LABEL[editItem?.status ?? ''] ?? editItem?.status}</Tag></FormField>)}
-          </>
+          <Section title="생산계획 정보">
+            <Row label="공장코드" required><Input name="plant_cd" placeholder="공장코드 입력" disabled={isEditDisabled} required defaultValue={_form.getFieldsValue().plant_cd ?? ''} onChange={(e) => _form.setFieldsValue({ plant_cd: e.target.value } as any)} /></Row>
+            <Row label="품목" required><Select name="item_cd" placeholder="품목 선택" options={itemOptions} required disabled={isEditDisabled} defaultValue={_form.getFieldsValue().item_cd ?? ''} onChange={(e) => _form.setFieldsValue({ item_cd: e.target.value } as any)} /></Row>
+            <Row label="계획수량" required><input type="number" name="plan_qty" placeholder="계획수량" min={1} step={1} required disabled={isEditDisabled} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15 disabled:opacity-50" defaultValue={_form.getFieldsValue().plan_qty ?? ''} onChange={(e) => _form.setFieldsValue({ plan_qty: Number(e.target.value) } as any)} /></Row>
+            <Row label="납기일" required><input type="date" name="due_date" required disabled={isEditDisabled} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15 disabled:opacity-50" defaultValue={_form.getFieldsValue().due_date as string ?? ''} onChange={(e) => _form.setFieldsValue({ due_date: e.target.value } as any)} /></Row>
+            <Row label="우선순위"><input type="number" name="priority" placeholder="우선순위 (1-10)" min={1} max={10} disabled={isEditDisabled} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15 disabled:opacity-50" defaultValue={_form.getFieldsValue().priority ?? 5} onChange={(e) => _form.setFieldsValue({ priority: Number(e.target.value) } as any)} /></Row>
+            {mode === 'edit' && (<Row label="상태"><Tag color={STATUS_COLOR[editItem?.status ?? ''] ?? 'default'}>{STATUS_LABEL[editItem?.status ?? ''] ?? editItem?.status}</Tag></Row>)}
+          </Section>
         )}
       </FormModal>
     </div>
