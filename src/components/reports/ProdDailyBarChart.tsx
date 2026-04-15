@@ -7,9 +7,10 @@ const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
 interface ProdDailyBarChartProps {
   data: Array<{ date: string; good_qty: number; achieve_rate: number }>;
+  height?: number;
 }
 
-export default function ProdDailyBarChart({ data }: ProdDailyBarChartProps) {
+export default function ProdDailyBarChart({ data, height = 320 }: ProdDailyBarChartProps) {
   const option = {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis' },
@@ -85,5 +86,5 @@ export default function ProdDailyBarChart({ data }: ProdDailyBarChartProps) {
     },
   };
 
-  return <ReactECharts option={option} style={{ height: 320 }} notMerge />;
+  return <ReactECharts option={option} style={{ height }} notMerge />;
 }

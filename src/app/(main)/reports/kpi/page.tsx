@@ -5,7 +5,6 @@ import { Search } from 'lucide-react';
 import dayjs, { type Dayjs } from 'dayjs';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
-import OeeGaugeChart from '@/components/equipment/OeeGaugeChart';
 import ProdDailyBarChart from '@/components/reports/ProdDailyBarChart';
 import DefectRateTrendChart from '@/components/reports/DefectRateTrendChart';
 import OeeTrendChart from '@/components/equipment/OeeTrendChart';
@@ -188,85 +187,56 @@ export default function KpiDashboardPage() {
         </Button>
       </div>
 
-      {/* KPI Cards — 4 columns */}
+      {/* KPI Cards — 4 columns (일관된 높이를 위해 종합 OEE도 숫자 카드 형태로) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          {loading ? (
-            <div className="h-[80px] flex items-center justify-center">
-              <Spinner />
-            </div>
-          ) : (
-            <div>
-              <p className="text-sm text-gray-500 mb-1">생산 달성률</p>
-              <p className="text-[28px] font-semibold text-gray-900">
-                {kpiData.prodAchieveRate.toFixed(1)}<span className="text-lg font-normal text-gray-500">%</span>
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          {loading ? (
-            <div className="h-[80px] flex items-center justify-center">
-              <Spinner />
-            </div>
-          ) : (
-            <div>
-              <p className="text-sm text-gray-500 mb-1">불량률</p>
-              <p className="text-[28px] font-semibold text-gray-900">
-                {kpiData.defectRate.toFixed(2)}<span className="text-lg font-normal text-gray-500">%</span>
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          {loading ? (
-            <div className="h-[200px] flex items-center justify-center">
-              <Spinner />
-            </div>
-          ) : (
-            <OeeGaugeChart title="종합 OEE" value={kpiData.avgOee} hasData={true} />
-          )}
-        </div>
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          {loading ? (
-            <div className="h-[80px] flex items-center justify-center">
-              <Spinner />
-            </div>
-          ) : (
-            <div>
-              <p className="text-sm text-gray-500 mb-1">재고 회전율</p>
-              <p className="text-[28px] font-semibold text-gray-900">
-                {kpiData.avgTurnover.toFixed(1)}<span className="text-lg font-normal text-gray-500">회</span>
-              </p>
-            </div>
-          )}
-        </div>
+        {[
+          { label: '생산 달성률', value: kpiData.prodAchieveRate.toFixed(1), unit: '%' },
+          { label: '불량률', value: kpiData.defectRate.toFixed(2), unit: '%' },
+          { label: '종합 OEE', value: kpiData.avgOee.toFixed(1), unit: '%' },
+          { label: '재고 회전율', value: kpiData.avgTurnover.toFixed(1), unit: '회' },
+        ].map((card) => (
+          <div key={card.label} className="bg-white rounded-xl p-5 shadow-sm">
+            {loading ? (
+              <div className="h-[60px] flex items-center justify-center">
+                <Spinner />
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{card.label}</p>
+                <p className="text-[28px] font-semibold text-gray-900 leading-none">
+                  {card.value}
+                  <span className="text-lg font-normal text-gray-500 ml-1">{card.unit}</span>
+                </p>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
-      {/* Mini Charts Row */}
+      {/* Mini Charts Row — 차트가 잘리지 않도록 컨테이너 높이 확장 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <h5 className="text-sm font-semibold text-gray-700 mb-2">생산추이</h5>
-          <div className="h-[160px] overflow-hidden">
-            <ProdDailyBarChart data={prodDailyData} />
+          <div className="h-[240px]">
+            <ProdDailyBarChart data={prodDailyData} height={220} />
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <h5 className="text-sm font-semibold text-gray-700 mb-2">불량률 추이</h5>
-          <div className="h-[160px] overflow-hidden">
-            <DefectRateTrendChart data={defectTrendData} />
+          <div className="h-[240px]">
+            <DefectRateTrendChart data={defectTrendData} height={220} />
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <h5 className="text-sm font-semibold text-gray-700 mb-2">OEE 추이</h5>
-          <div className="h-[160px] overflow-hidden">
-            <OeeTrendChart data={oeeTrendData} />
+          <div className="h-[240px]">
+            <OeeTrendChart data={oeeTrendData} height={220} />
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <h5 className="text-sm font-semibold text-gray-700 mb-2">재고현황</h5>
-          <div className="h-[160px] overflow-hidden">
-            <InventoryBarChart data={inventoryData} />
+          <div className="h-[240px]">
+            <InventoryBarChart data={inventoryData} height={220} />
           </div>
         </div>
       </div>

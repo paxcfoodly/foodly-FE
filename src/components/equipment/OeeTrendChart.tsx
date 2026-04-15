@@ -7,9 +7,10 @@ const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
 interface OeeTrendChartProps {
   data: Array<{ date: string; availability: number; oee: number }>;
+  height?: number;
 }
 
-export default function OeeTrendChart({ data }: OeeTrendChartProps) {
+export default function OeeTrendChart({ data, height = 240 }: OeeTrendChartProps) {
   const dates = data.map((d) => d.date);
   const oeeValues = data.map((d) => d.oee);
   const availabilityValues = data.map((d) => d.availability);
@@ -81,5 +82,5 @@ export default function OeeTrendChart({ data }: OeeTrendChartProps) {
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 240 }} notMerge />;
+  return <ReactECharts option={option} style={{ height }} notMerge />;
 }

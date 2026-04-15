@@ -7,9 +7,10 @@ const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
 interface InventoryBarChartProps {
   data: Array<{ item_nm: string; qty: number; turnover_rate: number }>;
+  height?: number;
 }
 
-export default function InventoryBarChart({ data }: InventoryBarChartProps) {
+export default function InventoryBarChart({ data, height = 320 }: InventoryBarChartProps) {
   const option = {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis' },
@@ -87,5 +88,5 @@ export default function InventoryBarChart({ data }: InventoryBarChartProps) {
     },
   };
 
-  return <ReactECharts option={option} style={{ height: 320 }} notMerge />;
+  return <ReactECharts option={option} style={{ height }} notMerge />;
 }

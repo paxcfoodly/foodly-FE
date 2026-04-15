@@ -7,9 +7,10 @@ const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
 export interface DefectRateTrendChartProps {
   data: Array<{ date: string; defect_rate: number }>;
+  height?: number;
 }
 
-export default function DefectRateTrendChart({ data }: DefectRateTrendChartProps) {
+export default function DefectRateTrendChart({ data, height = 320 }: DefectRateTrendChartProps) {
   const dates = data.map((d) => d.date);
   const rates = data.map((d) => d.defect_rate);
 
@@ -62,5 +63,5 @@ export default function DefectRateTrendChart({ data }: DefectRateTrendChartProps
     ],
   };
 
-  return <ReactECharts option={option} style={{ height: 320 }} notMerge />;
+  return <ReactECharts option={option} style={{ height }} notMerge />;
 }
