@@ -14,7 +14,7 @@ import ExcelDownloadButton, { type ExcelColumn } from '@/components/common/Excel
 import DataHistoryDrawer from '@/components/common/DataHistoryDrawer';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import apiClient from '@/lib/apiClient';
 import type { PaginatedResponse } from '@/types';
 import dayjs from 'dayjs';
@@ -368,8 +368,8 @@ export default function MoldMasterPage() {
         width={560}
       >
         {(form, mode) => (
-          <>
-            <FormField label="금형코드" required>
+          <Section title="금형 정보">
+            <Row label="금형코드" required>
               <Input
                 name="mold_cd"
                 placeholder="금형코드 입력"
@@ -379,8 +379,8 @@ export default function MoldMasterPage() {
                 value={(form.getFieldsValue().mold_cd as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ mold_cd: e.target.value } as Partial<MoldFormValues>)}
               />
-            </FormField>
-            <FormField label="금형명" required>
+            </Row>
+            <Row label="금형명" required>
               <Input
                 name="mold_nm"
                 placeholder="금형명 입력"
@@ -389,16 +389,16 @@ export default function MoldMasterPage() {
                 value={(form.getFieldsValue().mold_nm as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ mold_nm: e.target.value } as Partial<MoldFormValues>)}
               />
-            </FormField>
-            <FormField label="적용품목">
+            </Row>
+            <Row label="적용품목">
               <Select
                 placeholder="품목 선택"
                 options={itemOptions}
                 value={(form.getFieldsValue().item_cd as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ item_cd: e.target.value } as Partial<MoldFormValues>)}
               />
-            </FormField>
-            <FormField label="보증타수">
+            </Row>
+            <Row label="보증타수">
               <input
                 type="number"
                 name="warranty_shots"
@@ -408,8 +408,8 @@ export default function MoldMasterPage() {
                 value={form.getFieldsValue().warranty_shots ?? ''}
                 onChange={(e) => form.setFieldsValue({ warranty_shots: e.target.value ? Number(e.target.value) : undefined } as Partial<MoldFormValues>)}
               />
-            </FormField>
-            <FormField label="현재타수">
+            </Row>
+            <Row label="현재타수">
               <input
                 type="number"
                 name="current_shots"
@@ -419,17 +419,17 @@ export default function MoldMasterPage() {
                 value={form.getFieldsValue().current_shots ?? ''}
                 onChange={(e) => form.setFieldsValue({ current_shots: e.target.value ? Number(e.target.value) : undefined } as Partial<MoldFormValues>)}
               />
-            </FormField>
+            </Row>
             {mode === 'edit' && (
-              <FormField label="사용여부">
+              <Row label="사용여부">
                 <Select
                   options={USE_YN_OPTIONS}
                   value={(form.getFieldsValue().use_yn as string) ?? ''}
                   onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<MoldFormValues>)}
                 />
-              </FormField>
+              </Row>
             )}
-          </>
+          </Section>
         )}
       </FormModal>
 

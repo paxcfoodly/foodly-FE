@@ -6,7 +6,7 @@ import Table from '@/components/ui/Table';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -112,13 +112,13 @@ export default function MaterialInputPage() {
 
       <FormModal<MaterialInputFormValues> open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleSubmit} mode="create" title="자재투입 등록" width={560}>
         {(form) => (
-          <>
-            <FormField label="작업지시" required><Select name="wo_id" placeholder="작업지시 선택" required options={workOrders.map((wo) => ({ label: `${wo.wo_no} — ${wo.item?.item_nm ?? wo.item_cd}`, value: String(wo.wo_id) }))} defaultValue="" onChange={(e) => form.setFieldsValue({ wo_id: Number(e.target.value) } as any)} /></FormField>
-            <FormField label="품목" required><Select name="item_cd" placeholder="품목 선택" required options={items.map((it) => ({ label: `${it.item_cd} — ${it.item_nm}`, value: it.item_cd }))} defaultValue="" onChange={(e) => form.setFieldsValue({ item_cd: e.target.value } as any)} /></FormField>
-            <FormField label="LOT번호"><Input name="lot_no" placeholder="LOT번호 입력 (바코드 스캔)" ref={lotNoInputRef as React.Ref<HTMLInputElement>} autoFocus onChange={(e) => form.setFieldsValue({ lot_no: e.target.value } as any)} /></FormField>
-            <FormField label="투입수량" required><input type="number" name="input_qty" placeholder="투입수량" min={0.001} step="any" required className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" onChange={(e) => form.setFieldsValue({ input_qty: Number(e.target.value) } as any)} /></FormField>
-            <FormField label="작업자"><Select name="worker_id" placeholder="작업자 선택" options={[{ label: '선택 안함', value: '' }, ...workers.map((wk) => ({ label: wk.worker_nm, value: wk.worker_id }))]} defaultValue="" onChange={(e) => form.setFieldsValue({ worker_id: e.target.value } as any)} /></FormField>
-          </>
+          <Section title="자재투입 정보">
+            <Row label="작업지시" required><Select name="wo_id" placeholder="작업지시 선택" required options={workOrders.map((wo) => ({ label: `${wo.wo_no} — ${wo.item?.item_nm ?? wo.item_cd}`, value: String(wo.wo_id) }))} defaultValue="" onChange={(e) => form.setFieldsValue({ wo_id: Number(e.target.value) } as any)} /></Row>
+            <Row label="품목" required><Select name="item_cd" placeholder="품목 선택" required options={items.map((it) => ({ label: `${it.item_cd} — ${it.item_nm}`, value: it.item_cd }))} defaultValue="" onChange={(e) => form.setFieldsValue({ item_cd: e.target.value } as any)} /></Row>
+            <Row label="LOT번호"><Input name="lot_no" placeholder="LOT번호 입력 (바코드 스캔)" ref={lotNoInputRef as React.Ref<HTMLInputElement>} autoFocus onChange={(e) => form.setFieldsValue({ lot_no: e.target.value } as any)} /></Row>
+            <Row label="투입수량" required><input type="number" name="input_qty" placeholder="투입수량" min={0.001} step="any" required className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" onChange={(e) => form.setFieldsValue({ input_qty: Number(e.target.value) } as any)} /></Row>
+            <Row label="작업자"><Select name="worker_id" placeholder="작업자 선택" options={[{ label: '선택 안함', value: '' }, ...workers.map((wk) => ({ label: wk.worker_nm, value: wk.worker_id }))]} defaultValue="" onChange={(e) => form.setFieldsValue({ worker_id: e.target.value } as any)} /></Row>
+          </Section>
         )}
       </FormModal>
     </div>
