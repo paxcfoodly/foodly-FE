@@ -54,6 +54,7 @@ function buildColumns(
   today: string,
   onResultClick: (plan: MaintPlan) => void,
   onDeleteClick: (plan: MaintPlan) => void,
+  onHistoryClick: (plan: MaintPlan) => void,
 ): DataGridColumn<MaintPlan>[] {
   return [
     {
@@ -139,7 +140,7 @@ function buildColumns(
     {
       title: '작업',
       dataIndex: 'action',
-      width: 200,
+      width: 270,
       align: 'center',
       render: (_val: unknown, record: MaintPlan) => {
         const dateStr = record.next_plan_date ? String(record.next_plan_date).slice(0, 10) : undefined;
@@ -156,6 +157,16 @@ function buildColumns(
               }}
             >
               이력등록
+            </Button>
+            <Button
+              size="small"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                onHistoryClick(record);
+              }}
+            >
+              이력
             </Button>
             <Button
               size="small"
@@ -208,6 +219,12 @@ export default function PreventivePage() {
   const [selectedPlan, setSelectedPlan] = useState<MaintPlan | undefined>();
   const [resultModalOpen, setResultModalOpen] = useState(false);
   const [resultTargetPlan, setResultTargetPlan] = useState<MaintPlan | undefined>();
+
+  /* History drawer state */
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [historyPlan, setHistoryPlan] = useState<MaintPlan | undefined>();
+  const [historyResults, setHistoryResults] = useState<Array<Record<string, unknown>>>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   /* ── Fetch today count ─────────────────────────── */
   const fetchTodayCount = useCallback(async () => {
@@ -343,6 +360,24 @@ export default function PreventivePage() {
     [fetchPlans, pageSize, fetchCalendarPlans, calendarRange, fetchTodayCount],
   );
 
+  /* ── Plan history drawer ──────────────────────── */
+  const handleHistoryClick = useCallback(async (plan: MaintPlan) => {
+    setHistoryPlan(plan);
+    setHistoryDrawerOpen(true);
+    setHistoryLoading(true);
+    try {
+      const res = await apiClient.get('/v1/maint-results', {
+        params: { maint_plan_id: plan.maint_plan_id, limit: 100, sort: 'work_dt:desc' },
+      });
+      const rows = res.data?.data ?? [];
+      setHistoryResults(Array.isArray(rows) ? rows : []);
+    } catch {
+      setHistoryResults([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
   /* ── Modal refresh after success ─────────────── */
   const handleModalSuccess = useCallback(() => {
     setPlanModalOpen(false);
@@ -380,7 +415,7 @@ export default function PreventivePage() {
     : '보전 일정';
 
   /* ── Columns ─────────────────────────────────── */
-  const columns = buildColumns(today, handleResultClick, handleDeletePlan);
+  const columns = buildColumns(today, handleResultClick, handleDeletePlan, handleHistoryClick);
 
   /* ── Lazy-load modals ─────────────────────────── */
   const [MaintPlanFormModal, setMaintPlanFormModal] = useState<React.ComponentType<{
@@ -457,7 +492,7 @@ export default function PreventivePage() {
           total={total}
           onPageChange={handlePageChange}
           emptyText="등록된 보전계획이 없습니다. 보전계획 등록 버튼을 눌러 첫 일정을 추가해주세요."
-          scrollX={1130}
+          scrollX={1200}
           storageKey="preventive-maint-grid"
           onRow={(record) => ({
             onDoubleClick: () => handleRowDoubleClick(record),
@@ -507,6 +542,57 @@ export default function PreventivePage() {
                         보전이력 등록
                       </Button>
                     </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Drawer>
+
+      {/* History drawer — past maint results for a given plan */}
+      <Drawer
+        open={historyDrawerOpen}
+        title={historyPlan ? `보전이력 — ${historyPlan.plan_nm}` : '보전이력'}
+        placement="right"
+        width={520}
+        onClose={() => setHistoryDrawerOpen(false)}
+      >
+        {historyLoading ? (
+          <p className="text-gray-400">불러오는 중…</p>
+        ) : historyResults.length === 0 ? (
+          <p className="text-gray-400">등록된 보전이력이 없습니다.</p>
+        ) : (
+          <div className="space-y-3">
+            {historyResults.map((r) => {
+              const workDt = r.work_dt ? String(r.work_dt).slice(0, 10) : '-';
+              const worker = (r.worker as { worker_nm?: string } | null)?.worker_nm;
+              const maintType = r.maint_type_cd as string | undefined;
+              const cost = r.cost as number | string | undefined;
+              const memo = r.memo as string | undefined;
+              const maintNo = r.maint_no as string | undefined;
+              return (
+                <div key={r.maint_result_id as number} className="border border-gray-100 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-700">{workDt}</span>
+                    {maintType && <Tag color="blue">{maintType}</Tag>}
+                  </div>
+                  <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+                    <span>작업자:</span>
+                    <span className="text-gray-700">{worker ?? '-'}</span>
+                  </div>
+                  {(cost !== undefined && cost !== null && cost !== '') && (
+                    <div className="mt-1 text-sm text-gray-500">
+                      비용: <span className="text-gray-700">{Number(cost).toLocaleString()}</span>
+                    </div>
+                  )}
+                  {memo && (
+                    <div className="mt-1 text-sm text-gray-500">
+                      메모: <span className="text-gray-700">{memo}</span>
+                    </div>
+                  )}
+                  {maintNo && (
+                    <div className="mt-1 text-xs text-gray-400">#{maintNo}</div>
                   )}
                 </div>
               );
