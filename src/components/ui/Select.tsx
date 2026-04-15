@@ -37,9 +37,10 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {...rest}
       >
         {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
+          // Placeholder option stays selectable so the user can re-pick
+          // it to clear a prior selection (e.g. go back to "전체" after
+          // choosing FIN001 in a filter dropdown).
+          <option value="">{placeholder}</option>
         )}
         {options.map((opt) => (
           <option key={opt.value} value={opt.value} disabled={opt.disabled}>
