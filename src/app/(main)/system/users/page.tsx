@@ -7,7 +7,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import toast from '@/components/ui/toast';
 import DataGrid, { type DataGridColumn } from '@/components/common/DataGrid';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
@@ -416,8 +416,8 @@ export default function UsersPage() {
         width={560}
       >
         {(form, mode) => (
-          <>
-            <FormField label="로그인ID" required>
+          <Section title="사용자 정보">
+            <Row label="로그인ID" required>
               <Input
                 name="login_id"
                 placeholder="로그인ID"
@@ -428,9 +428,8 @@ export default function UsersPage() {
                 value={(form.getFieldsValue().login_id as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ login_id: e.target.value } as Partial<UserFormValues>)}
               />
-            </FormField>
-
-            <FormField label="성명" required>
+            </Row>
+            <Row label="성명" required>
               <Input
                 name="user_nm"
                 placeholder="성명"
@@ -439,10 +438,9 @@ export default function UsersPage() {
                 value={(form.getFieldsValue().user_nm as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ user_nm: e.target.value } as Partial<UserFormValues>)}
               />
-            </FormField>
-
+            </Row>
             {mode === 'create' && (
-              <FormField label="비밀번호" required>
+              <Row label="비밀번호" required>
                 <input
                   type="password"
                   name="password"
@@ -453,10 +451,9 @@ export default function UsersPage() {
                   value={(form.getFieldsValue().password as string) ?? ''}
                   onChange={(e) => form.setFieldsValue({ password: e.target.value } as Partial<UserFormValues>)}
                 />
-              </FormField>
+              </Row>
             )}
-
-            <FormField label="역할">
+            <Row label="역할">
               <Select
                 name="role_cd"
                 placeholder="역할 선택"
@@ -467,10 +464,9 @@ export default function UsersPage() {
                   value: r.role_cd,
                 }))}
               />
-            </FormField>
-
+            </Row>
             {mode === 'edit' && (
-              <FormField label="상태">
+              <Row label="상태">
                 <Select
                   name="status"
                   value={(form.getFieldsValue().status as string) ?? ''}
@@ -480,9 +476,9 @@ export default function UsersPage() {
                     { label: '비활성', value: 'INACTIVE' },
                   ]}
                 />
-              </FormField>
+              </Row>
             )}
-          </>
+          </Section>
         )}
       </FormModal>
 

@@ -10,7 +10,7 @@ import Tooltip from '@/components/ui/Tooltip';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -168,26 +168,26 @@ export default function DemandPage() {
         emptyText="등록된 수주가 없습니다. 수주를 등록하면 생산계획 초안을 자동으로 생성할 수 있습니다." />
 
       {/* Create/Edit Demand Modal */}
-      <Modal title={editingDemand ? '수주 수정' : '수주 등록'} open={createModalOpen} onClose={() => setCreateModalOpen(false)} width={480}
+      <Modal title={editingDemand ? '수주 수정' : '수주 등록'} open={createModalOpen} onClose={() => setCreateModalOpen(false)} width={560}
         footer={<div className="flex items-center gap-2"><Button onClick={() => setCreateModalOpen(false)}>취소</Button><Button variant="primary" loading={createSubmitting} onClick={handleCreateSubmit}>{editingDemand ? '수정' : '등록'}</Button></div>}>
-        <div className="space-y-4 mt-4">
-          <FormField label="품목" required><Select name="item_cd" placeholder="품목 선택" options={itemOptions} disabled={!!editingDemand} value={createFormValues.item_cd as string ?? ''} onChange={(e) => setCreateFormValues((p) => ({ ...p, item_cd: e.target.value }))} /></FormField>
-          <FormField label="수량" required><input type="number" min={1} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" placeholder="수량 입력" value={createFormValues.demand_qty as number ?? ''} onChange={(e) => setCreateFormValues((p) => ({ ...p, demand_qty: Number(e.target.value) }))} /></FormField>
-          <FormField label="납기일"><input type="date" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" value={createFormValues.due_date as string ?? ''} onChange={(e) => setCreateFormValues((p) => ({ ...p, due_date: e.target.value }))} /></FormField>
-          <FormField label="거래처"><Select name="cust_cd" placeholder="거래처 선택 (선택)" options={[{ label: '선택 안함', value: '' }, ...customerOptions]} value={createFormValues.cust_cd as string ?? ''} onChange={(e) => setCreateFormValues((p) => ({ ...p, cust_cd: e.target.value }))} /></FormField>
-          <FormField label="비고"><Textarea rows={2} placeholder="비고 입력 (선택)" value={createFormValues.remark as string ?? ''} onChange={(e) => setCreateFormValues((p) => ({ ...p, remark: e.target.value }))} /></FormField>
-        </div>
+        <Section title="수주 정보">
+          <Row label="품목" required><Select name="item_cd" placeholder="품목 선택" options={itemOptions} disabled={!!editingDemand} value={createFormValues.item_cd as string ?? ''} onChange={(e) => setCreateFormValues((p) => ({ ...p, item_cd: e.target.value }))} /></Row>
+          <Row label="수량" required><input type="number" min={1} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" placeholder="수량 입력" value={createFormValues.demand_qty as number ?? ''} onChange={(e) => setCreateFormValues((p) => ({ ...p, demand_qty: Number(e.target.value) }))} /></Row>
+          <Row label="납기일"><input type="date" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" value={createFormValues.due_date as string ?? ''} onChange={(e) => setCreateFormValues((p) => ({ ...p, due_date: e.target.value }))} /></Row>
+          <Row label="거래처"><Select name="cust_cd" placeholder="거래처 선택 (선택)" options={[{ label: '선택 안함', value: '' }, ...customerOptions]} value={createFormValues.cust_cd as string ?? ''} onChange={(e) => setCreateFormValues((p) => ({ ...p, cust_cd: e.target.value }))} /></Row>
+          <Row label="비고"><Textarea rows={2} placeholder="비고 입력 (선택)" value={createFormValues.remark as string ?? ''} onChange={(e) => setCreateFormValues((p) => ({ ...p, remark: e.target.value }))} /></Row>
+        </Section>
       </Modal>
 
       {/* Create Plan Draft Modal */}
-      <Modal title="생산계획 초안 생성" open={draftModalOpen} onClose={() => setDraftModalOpen(false)} width={480}
+      <Modal title="생산계획 초안 생성" open={draftModalOpen} onClose={() => setDraftModalOpen(false)} width={560}
         footer={<div className="flex items-center gap-2"><Button onClick={() => setDraftModalOpen(false)}>취소</Button><Button variant="primary" loading={draftSubmitting} onClick={handleDraftSubmit}>초안 생성</Button></div>}>
-        <div className="space-y-4 mt-4">
-          <FormField label="품목명"><Input disabled value={draftDemand?.item?.item_nm ?? draftDemand?.item_cd ?? ''} /></FormField>
-          <FormField label="계획 수량" required><input type="number" min={1} required className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" placeholder="계획 수량 입력" value={draftFormValues.plan_qty as number ?? ''} onChange={(e) => setDraftFormValues((p) => ({ ...p, plan_qty: Number(e.target.value) }))} /></FormField>
-          <FormField label="납기일"><input type="date" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" value={draftFormValues.due_date as string ?? ''} onChange={(e) => setDraftFormValues((p) => ({ ...p, due_date: e.target.value }))} /></FormField>
-          <FormField label="생산라인" required><Select name="plant_cd" placeholder="생산라인 선택" options={workshopOptions} required value={draftFormValues.plant_cd as string ?? ''} onChange={(e) => setDraftFormValues((p) => ({ ...p, plant_cd: e.target.value }))} /></FormField>
-        </div>
+        <Section title="초안 정보">
+          <Row label="품목명"><Input disabled value={draftDemand?.item?.item_nm ?? draftDemand?.item_cd ?? ''} /></Row>
+          <Row label="계획 수량" required><input type="number" min={1} required className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" placeholder="계획 수량 입력" value={draftFormValues.plan_qty as number ?? ''} onChange={(e) => setDraftFormValues((p) => ({ ...p, plan_qty: Number(e.target.value) }))} /></Row>
+          <Row label="납기일"><input type="date" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" value={draftFormValues.due_date as string ?? ''} onChange={(e) => setDraftFormValues((p) => ({ ...p, due_date: e.target.value }))} /></Row>
+          <Row label="생산라인" required><Select name="plant_cd" placeholder="생산라인 선택" options={workshopOptions} required value={draftFormValues.plant_cd as string ?? ''} onChange={(e) => setDraftFormValues((p) => ({ ...p, plant_cd: e.target.value }))} /></Row>
+        </Section>
       </Modal>
     </div>
   );

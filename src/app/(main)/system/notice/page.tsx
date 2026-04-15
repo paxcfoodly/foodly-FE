@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import toast from '@/components/ui/toast';
 import DataGrid, { type DataGridColumn } from '@/components/common/DataGrid';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
@@ -344,8 +344,8 @@ export default function NoticePage() {
         width={640}
       >
         {(form) => (
-          <>
-            <FormField label="제목" required>
+          <Section title="공지 정보">
+            <Row label="제목" required>
               <Input
                 name="title"
                 placeholder="공지사항 제목"
@@ -354,9 +354,8 @@ export default function NoticePage() {
                 value={(form.getFieldsValue().title as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ title: e.target.value } as Partial<NoticeFormValues>)}
               />
-            </FormField>
-
-            <FormField label="내용">
+            </Row>
+            <Row label="내용">
               <Textarea
                 name="content"
                 placeholder="공지사항 내용을 입력하세요."
@@ -365,9 +364,8 @@ export default function NoticePage() {
                 value={(form.getFieldsValue().content as string) ?? ''}
                 onChange={(e) => form.setFieldsValue({ content: e.target.value } as Partial<NoticeFormValues>)}
               />
-            </FormField>
-
-            <FormField label="팝업 공지">
+            </Row>
+            <Row label="팝업 공지">
               <Select
                 name="is_popup"
                 placeholder="일반 공지"
@@ -378,8 +376,8 @@ export default function NoticePage() {
                   { label: '팝업 공지', value: 'Y' },
                 ]}
               />
-            </FormField>
-          </>
+            </Row>
+          </Section>
         )}
       </FormModal>
 

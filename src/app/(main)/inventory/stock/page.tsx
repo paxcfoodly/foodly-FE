@@ -8,7 +8,7 @@ import Modal from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Input';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import PermissionButton from '@/components/auth/PermissionButton';
 import SearchForm, { type SearchFieldDef } from '@/components/common/SearchForm';
 import apiClient from '@/lib/apiClient';
@@ -96,26 +96,26 @@ export default function InventoryStockPage() {
       <Modal title="재고 조정" open={adjustOpen} onClose={() => { setAdjustOpen(false); setAdjustTarget(null); }} width={480}
         footer={<div className="flex items-center gap-2"><Button onClick={() => { setAdjustOpen(false); setAdjustTarget(null); }}>취소</Button><Button variant="primary" loading={adjustLoading} onClick={handleAdjustSubmit}>조정</Button></div>}>
         {adjustTarget && (
-          <>
-            <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-dark-700 rounded-lg text-sm">
-              <div><span className="text-gray-400">품목코드:</span> {adjustTarget.item_cd}</div>
-              <div><span className="text-gray-400">품목명:</span> {adjustTarget.item?.item_nm ?? '-'}</div>
-              <div><span className="text-gray-400">LOT번호:</span> {adjustTarget.lot_no ?? '-'}</div>
-              <div><span className="text-gray-400">창고:</span> {adjustTarget.warehouse?.wh_nm ?? adjustTarget.wh_cd}</div>
-              <div><span className="text-gray-400">현재 재고:</span> {Number(adjustTarget.qty).toLocaleString()}</div>
-              <div><span className="text-gray-400">가용 수량:</span> {Number(adjustTarget.available_qty).toLocaleString()}</div>
-            </div>
-            <div className="space-y-4">
-              <FormField label="조정 수량" required>
+          <div className="space-y-5">
+            <Section title="재고 정보">
+              <Row label="품목코드"><span className="text-sm text-gray-700 leading-9">{adjustTarget.item_cd}</span></Row>
+              <Row label="품목명"><span className="text-sm text-gray-700 leading-9">{adjustTarget.item?.item_nm ?? '-'}</span></Row>
+              <Row label="LOT번호"><span className="text-sm text-gray-700 leading-9">{adjustTarget.lot_no ?? '-'}</span></Row>
+              <Row label="창고"><span className="text-sm text-gray-700 leading-9">{adjustTarget.warehouse?.wh_nm ?? adjustTarget.wh_cd}</span></Row>
+              <Row label="현재 재고"><span className="text-sm text-gray-700 leading-9">{Number(adjustTarget.qty).toLocaleString()}</span></Row>
+              <Row label="가용 수량"><span className="text-sm text-gray-700 leading-9">{Number(adjustTarget.available_qty).toLocaleString()}</span></Row>
+            </Section>
+            <Section title="조정 내역">
+              <Row label="조정 수량" required>
                 <input type="number" placeholder="조정 수량 (예: 10, -5)" step={1} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
                   value={adjustValues.adjust_qty || ''} onChange={(e) => setAdjustValues((p) => ({ ...p, adjust_qty: Number(e.target.value) }))} />
                 <p className="text-xs text-gray-400 mt-1">양수: 재고 증가, 음수: 재고 감소</p>
-              </FormField>
-              <FormField label="조정 사유">
+              </Row>
+              <Row label="조정 사유">
                 <Textarea placeholder="조정 사유를 입력하세요" rows={3} maxLength={500} value={adjustValues.adjust_reason ?? ''} onChange={(e) => setAdjustValues((p) => ({ ...p, adjust_reason: e.target.value }))} />
-              </FormField>
-            </div>
-          </>
+              </Row>
+            </Section>
+          </div>
         )}
       </Modal>
     </div>
