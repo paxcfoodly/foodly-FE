@@ -120,7 +120,10 @@ export default function DataGrid<T extends Record<string, unknown> = Record<stri
       columns.map((col) => ({
         title: col.title,
         dataIndex: col.dataIndex,
-        key: col.dataIndex,
+        // 같은 dataIndex를 가진 컬럼이 둘 이상 있을 때(예: '점검일'과
+        // '상태'가 모두 next_plan_date 기준) React key 충돌을 막기 위해
+        // col.key를 우선 사용.
+        key: col.key ?? col.dataIndex,
         width: col.width,
         align: col.align,
         fixed: col.fixed,
