@@ -49,7 +49,11 @@ export interface TableProps<T = Record<string, unknown>> {
   scrollX?: number | string;
   title?: string;
   summary?: () => React.ReactNode;
+  /** localStorage 에 드래그 조정된 컬럼 너비를 저장하는 키. 미지정시 세션 동안만 유지. */
+  storageKey?: string;
 }
+
+const WIDTH_STORAGE_PREFIX = 'dg-widths:';
 
 function getRowKey<T>(record: T, rowKey: string | ((r: T, i: number) => string), index: number): React.Key {
   if (typeof rowKey === 'function') return rowKey(record, index);
@@ -73,10 +77,35 @@ export default function Table<T extends Record<string, unknown> = Record<string,
   scrollX,
   title,
   summary,
+  storageKey,
 }: TableProps<T>) {
   /* ── Column resize state ── */
   // Tracks user-dragged overrides. Key: col.key || col.dataIndex.
-  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  // When storageKey is provided, hydrate from localStorage on mount so
+  // user-tuned widths persist across reloads / route changes.
+  const [colWidths, setColWidths] = useState<Record<string, number>>(() => {
+    if (!storageKey || typeof window === 'undefined') return {};
+    try {
+      const raw = window.localStorage.getItem(WIDTH_STORAGE_PREFIX + storageKey);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, number>) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Persist widths whenever they change (debounced trivially via React batching).
+  useEffect(() => {
+    if (!storageKey || typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(
+        WIDTH_STORAGE_PREFIX + storageKey,
+        JSON.stringify(colWidths),
+      );
+    } catch {
+      /* ignore quota / serialization errors */
+    }
+  }, [storageKey, colWidths]);
   // Active drag session — stored in a ref so the mouse listeners don't
   // trigger re-renders until we actually commit a width change.
   const dragRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null);

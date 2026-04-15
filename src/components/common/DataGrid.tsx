@@ -82,6 +82,8 @@ export interface DataGridProps<T extends Record<string, unknown> = Record<string
   onRow?: (record: T, index?: number) => React.HTMLAttributes<HTMLElement>;
   /** bordered — disabled by default (No-Line rule) */
   bordered?: boolean;
+  /** localStorage 에 사용자가 드래그한 컬럼 너비를 저장할 키. 페이지 단위 unique 권장 (예: 'preventive-maint-grid'). */
+  storageKey?: string;
 }
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -110,6 +112,7 @@ export default function DataGrid<T extends Record<string, unknown> = Record<stri
   size = 'middle',
   summary,
   onRow,
+  storageKey,
 }: DataGridProps<T>) {
   /* ── 컬럼 변환 ─── */
   const tableColumns: TableColumn<T>[] = useMemo(
@@ -176,6 +179,7 @@ export default function DataGrid<T extends Record<string, unknown> = Record<stri
       title={title}
       summary={summary}
       onRow={handleRow}
+      storageKey={storageKey}
     />
   );
 }
