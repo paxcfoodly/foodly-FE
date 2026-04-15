@@ -15,12 +15,14 @@ export default function ProdDailyBarChart({ data }: ProdDailyBarChartProps) {
     tooltip: { trigger: 'axis' },
     legend: {
       data: ['생산량', '달성률'],
+      top: 8,
+      left: 'center',
       textStyle: {
         fontSize: 12,
         fontFamily: 'Pretendard Variable, Pretendard, -apple-system, sans-serif',
       },
     },
-    grid: { left: 60, right: 70, top: 40, bottom: 30, containLabel: false },
+    grid: { left: 60, right: 70, top: 45, bottom: 30, containLabel: false },
     xAxis: {
       type: 'category',
       data: data.map((d) => d.date),
@@ -33,6 +35,9 @@ export default function ProdDailyBarChart({ data }: ProdDailyBarChartProps) {
       {
         type: 'value',
         name: '수량',
+        nameLocation: 'middle',
+        nameGap: 42,
+        nameRotate: 90,
         position: 'left',
         axisLabel: {
           fontSize: 12,
@@ -42,6 +47,9 @@ export default function ProdDailyBarChart({ data }: ProdDailyBarChartProps) {
       {
         type: 'value',
         name: '달성률(%)',
+        nameLocation: 'middle',
+        nameGap: 42,
+        nameRotate: -90,
         min: 0,
         position: 'right',
         axisLabel: {
