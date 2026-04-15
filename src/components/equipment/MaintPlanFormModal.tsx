@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import toast from '@/components/ui/toast';
 import CommonCodeSelect from '@/components/common/CommonCodeSelect';
 import apiClient from '@/lib/apiClient';
@@ -206,144 +206,152 @@ export default function MaintPlanFormModal({
       onClose={handleCancel}
       footer={footer}
     >
-      <fieldset disabled={isView} className="space-y-4">
-        {/* Equipment */}
-        <FormField label="설비" required layout="horizontal">
-          <Select
-            placeholder="설비 선택"
-            value={(formValues.equip_cd as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, equip_cd: e.target.value }))}
-            options={equipments.map((e) => ({
-              label: e.equip_nm,
-              value: e.equip_cd,
-            }))}
-          />
-        </FormField>
+      <fieldset disabled={isView} className="space-y-5">
+        <Section title="기본 정보">
+          <Row label="설비" required>
+            <Select
+              placeholder="설비 선택"
+              value={(formValues.equip_cd as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, equip_cd: e.target.value }))}
+              options={equipments.map((e) => ({ label: e.equip_nm, value: e.equip_cd }))}
+            />
+          </Row>
+          <Row label="보전계획명" required>
+            <Input
+              placeholder="보전계획명"
+              required
+              value={(formValues.plan_nm as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, plan_nm: e.target.value }))}
+            />
+          </Row>
+          <Row label="보전유형">
+            <CommonCodeSelect
+              groupCd="MAINT_TYPE"
+              placeholder="보전유형 선택"
+              showAll
+              value={(formValues.maint_type_cd as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, maint_type_cd: e.target.value }))}
+            />
+          </Row>
+          <Row label="점검주기">
+            <Select
+              placeholder="주기 선택"
+              value={(formValues.cycle_type as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, cycle_type: e.target.value }))}
+              options={[
+                { label: '매일', value: 'DAILY' },
+                { label: '매주', value: 'WEEKLY' },
+                { label: '매월', value: 'MONTHLY' },
+                { label: '매년', value: 'YEARLY' },
+              ]}
+            />
+          </Row>
+          <Row label="점검일" required>
+            <input
+              type="date"
+              className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
+              required
+              value={(formValues.next_plan_date as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, next_plan_date: e.target.value }))}
+            />
+          </Row>
+          <Row label="담당자">
+            <Select
+              placeholder="담당자 선택"
+              value={(formValues.assignee_id as string) ?? ''}
+              onChange={(e) =>
+                setFormValues((prev) => ({
+                  ...prev,
+                  assignee_id: e.target.value || undefined,
+                }))
+              }
+              options={workers.map((w) => ({
+                label: `${w.worker_id} - ${w.worker_nm}`,
+                value: w.worker_id,
+              }))}
+            />
+          </Row>
+          <Row label="설명">
+            <Textarea
+              rows={2}
+              placeholder="보전 설명"
+              value={(formValues.description as string) ?? ''}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, description: e.target.value }))}
+            />
+          </Row>
+        </Section>
 
-        {/* Plan name */}
-        <FormField label="보전계획명" required layout="horizontal">
-          <Input
-            placeholder="보전계획명"
-            required
-            value={(formValues.plan_nm as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, plan_nm: e.target.value }))}
-          />
-        </FormField>
-
-        {/* Maintenance type */}
-        <FormField label="보전유형" layout="horizontal">
-          <CommonCodeSelect
-            groupCd="MAINT_TYPE"
-            placeholder="보전유형 선택"
-            showAll
-            value={(formValues.maint_type_cd as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, maint_type_cd: e.target.value }))}
-          />
-        </FormField>
-
-        {/* Cycle type */}
-        <FormField label="점검주기" layout="horizontal">
-          <Select
-            placeholder="주기 선택"
-            value={(formValues.cycle_type as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, cycle_type: e.target.value }))}
-            options={[
-              { label: '매일', value: 'DAILY' },
-              { label: '매주', value: 'WEEKLY' },
-              { label: '매월', value: 'MONTHLY' },
-              { label: '매년', value: 'YEARLY' },
-            ]}
-          />
-        </FormField>
-
-        {/* Next plan date */}
-        <FormField label="점검일" required layout="horizontal">
-          <input
-            type="date"
-            className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 transition-all focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15"
-            required
-            value={(formValues.next_plan_date as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, next_plan_date: e.target.value }))}
-          />
-        </FormField>
-
-        {/* Assignee */}
-        <FormField label="담당자" layout="horizontal">
-          <Select
-            placeholder="담당자 선택"
-            value={(formValues.assignee_id as string) ?? ''}
-            onChange={(e) =>
-              setFormValues((prev) => ({
-                ...prev,
-                assignee_id: e.target.value || undefined,
-              }))
-            }
-            options={workers.map((w) => ({
-              label: `${w.worker_id} - ${w.worker_nm}`,
-              value: w.worker_id,
-            }))}
-          />
-        </FormField>
-
-        {/* Description */}
-        <FormField label="설명" layout="horizontal">
-          <Textarea
-            rows={2}
-            placeholder="보전 설명"
-            value={(formValues.description as string) ?? ''}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, description: e.target.value }))}
-          />
-        </FormField>
-
-        {/* Dynamic checklist items */}
-        <FormField label="점검항목" layout="horizontal">
-          <div className="space-y-2">
-            {checklistItems.map((item, index) => (
-              <div key={index} className="flex items-baseline gap-2">
-                <span className="text-xs text-gray-400 min-w-[24px]">{index + 1}.</span>
-                <Input
-                  placeholder="점검항목명"
-                  required
-                  className="w-[200px]"
-                  value={item.check_item}
-                  onChange={(e) => {
-                    setChecklistItems((prev) =>
-                      prev.map((ci, i) => (i === index ? { ...ci, check_item: e.target.value } : ci)),
-                    );
-                  }}
-                />
-                <Input
-                  placeholder="점검기준 (선택)"
-                  className="w-[200px]"
-                  value={item.check_std}
-                  onChange={(e) => {
-                    setChecklistItems((prev) =>
-                      prev.map((ci, i) => (i === index ? { ...ci, check_std: e.target.value } : ci)),
-                    );
-                  }}
-                />
-                {!isView && (
-                  <Button
-                    variant="danger"
-                    size="small"
-                    icon={<Trash2 className="w-4 h-4" />}
-                    onClick={() => setChecklistItems((prev) => prev.filter((_, i) => i !== index))}
-                  />
-                )}
-              </div>
-            ))}
-            {!isView && (
+        <Section
+          title="점검항목"
+          action={
+            !isView ? (
               <Button
                 variant="ghost"
-                onClick={() => setChecklistItems((prev) => [...prev, { check_item: '', check_std: '' }])}
+                onClick={() =>
+                  setChecklistItems((prev) => [...prev, { check_item: '', check_std: '' }])
+                }
                 icon={<Plus className="w-4 h-4" />}
                 size="small"
               >
                 항목 추가
               </Button>
-            )}
-          </div>
-        </FormField>
+            ) : undefined
+          }
+        >
+          {checklistItems.length === 0 ? (
+            <p className="text-sm text-gray-400">등록된 점검항목이 없습니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {checklistItems.map((item, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-[110px_1fr] gap-3 items-center"
+                >
+                  <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                    항목 {index + 1}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="점검항목명"
+                      required
+                      className="flex-1"
+                      value={item.check_item}
+                      onChange={(e) => {
+                        setChecklistItems((prev) =>
+                          prev.map((ci, i) =>
+                            i === index ? { ...ci, check_item: e.target.value } : ci,
+                          ),
+                        );
+                      }}
+                    />
+                    <Input
+                      placeholder="점검기준 (선택)"
+                      className="flex-1"
+                      value={item.check_std}
+                      onChange={(e) => {
+                        setChecklistItems((prev) =>
+                          prev.map((ci, i) =>
+                            i === index ? { ...ci, check_std: e.target.value } : ci,
+                          ),
+                        );
+                      }}
+                    />
+                    {!isView && (
+                      <Button
+                        variant="danger"
+                        size="small"
+                        icon={<Trash2 className="w-4 h-4" />}
+                        onClick={() =>
+                          setChecklistItems((prev) => prev.filter((_, i) => i !== index))
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
       </fieldset>
     </Modal>
   );

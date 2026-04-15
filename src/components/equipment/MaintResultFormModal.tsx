@@ -9,6 +9,7 @@ import Input from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Tooltip from '@/components/ui/Tooltip';
+import { Section, Row } from '@/components/ui/Section';
 import toast from '@/components/ui/toast';
 import CommonCodeSelect from '@/components/common/CommonCodeSelect';
 import FileUpload from '@/components/common/FileUpload';
@@ -44,54 +45,6 @@ interface WorkerOption {
 interface EquipmentOption {
   equip_cd: string;
   equip_nm: string;
-}
-
-/* ── Layout helpers ────────────────────────────────── */
-
-function Section({
-  title,
-  aside,
-  action,
-  children,
-}: {
-  title: string;
-  aside?: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="border border-gray-100 rounded-lg">
-      <header className="flex items-center justify-between px-4 h-10 border-b border-gray-100 bg-gray-50/60 rounded-t-lg">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-1 h-4 bg-cyan-accent rounded-sm" />
-          <span className="text-sm font-semibold text-gray-700">{title}</span>
-          {aside && <span className="text-xs text-gray-400">{aside}</span>}
-        </div>
-        {action}
-      </header>
-      <div className="p-4 space-y-3">{children}</div>
-    </section>
-  );
-}
-
-function Row({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="grid grid-cols-[110px_1fr] gap-3 items-start">
-      <label className="text-xs font-medium text-gray-400 uppercase tracking-wide pt-2">
-        {label}
-        {required && <span className="text-red-accent ml-0.5">*</span>}
-      </label>
-      <div>{children}</div>
-    </div>
-  );
 }
 
 /* ── Component ────────────────────────────────────── */
