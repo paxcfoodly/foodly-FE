@@ -8,7 +8,7 @@ import Table from '@/components/ui/Table';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -229,16 +229,16 @@ export default function EquipmentMasterPage() {
         title={modalMode === 'create' ? '설비 등록' : '설비 수정'} width={560}
       >
         {(form, mode) => (
-          <>
-            <FormField label="설비코드" required><Input name="equip_cd" placeholder="설비코드 입력" disabled={mode === 'edit'} maxLength={30} required defaultValue={form.getFieldsValue().equip_cd ?? ''} onChange={(e) => form.setFieldsValue({ equip_cd: e.target.value } as any)} /></FormField>
-            <FormField label="설비명" required><Input name="equip_nm" placeholder="설비명 입력" maxLength={200} required defaultValue={form.getFieldsValue().equip_nm ?? ''} onChange={(e) => form.setFieldsValue({ equip_nm: e.target.value } as any)} /></FormField>
-            <FormField label="설비유형"><Select name="equip_type" placeholder="설비유형 선택" options={[{ label: '선택 안함', value: '' }, ...EQUIP_TYPE_OPTIONS]} defaultValue={form.getFieldsValue().equip_type ?? ''} onChange={(e) => form.setFieldsValue({ equip_type: e.target.value } as any)} /></FormField>
-            <FormField label="제조사"><Input name="maker" placeholder="제조사 입력" defaultValue={form.getFieldsValue().maker ?? ''} onChange={(e) => form.setFieldsValue({ maker: e.target.value } as any)} /></FormField>
-            <FormField label="모델명"><Input name="model_nm" placeholder="모델명 입력" defaultValue={form.getFieldsValue().model_nm ?? ''} onChange={(e) => form.setFieldsValue({ model_nm: e.target.value } as any)} /></FormField>
-            <FormField label="설치일"><input type="date" name="install_date" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={form.getFieldsValue().install_date ?? ''} onChange={(e) => form.setFieldsValue({ install_date: e.target.value } as any)} /></FormField>
-            <FormField label="작업장"><Select name="workshop_cd" placeholder="작업장 선택" options={[{ label: '선택 안함', value: '' }, ...workshopOptions]} defaultValue={form.getFieldsValue().workshop_cd ?? ''} onChange={(e) => form.setFieldsValue({ workshop_cd: e.target.value } as any)} /></FormField>
-            {mode === 'edit' && (<FormField label="사용여부"><Select name="use_yn" options={USE_YN_OPTIONS} defaultValue={form.getFieldsValue().use_yn ?? 'Y'} onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as any)} /></FormField>)}
-          </>
+          <Section title="설비 정보">
+            <Row label="설비코드" required><Input name="equip_cd" placeholder="설비코드 입력" disabled={mode === 'edit'} maxLength={30} required defaultValue={form.getFieldsValue().equip_cd ?? ''} onChange={(e) => form.setFieldsValue({ equip_cd: e.target.value } as any)} /></Row>
+            <Row label="설비명" required><Input name="equip_nm" placeholder="설비명 입력" maxLength={200} required defaultValue={form.getFieldsValue().equip_nm ?? ''} onChange={(e) => form.setFieldsValue({ equip_nm: e.target.value } as any)} /></Row>
+            <Row label="설비유형"><Select name="equip_type" placeholder="설비유형 선택" options={[{ label: '선택 안함', value: '' }, ...EQUIP_TYPE_OPTIONS]} defaultValue={form.getFieldsValue().equip_type ?? ''} onChange={(e) => form.setFieldsValue({ equip_type: e.target.value } as any)} /></Row>
+            <Row label="제조사"><Input name="maker" placeholder="제조사 입력" defaultValue={form.getFieldsValue().maker ?? ''} onChange={(e) => form.setFieldsValue({ maker: e.target.value } as any)} /></Row>
+            <Row label="모델명"><Input name="model_nm" placeholder="모델명 입력" defaultValue={form.getFieldsValue().model_nm ?? ''} onChange={(e) => form.setFieldsValue({ model_nm: e.target.value } as any)} /></Row>
+            <Row label="설치일"><input type="date" name="install_date" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={form.getFieldsValue().install_date ?? ''} onChange={(e) => form.setFieldsValue({ install_date: e.target.value } as any)} /></Row>
+            <Row label="작업장"><Select name="workshop_cd" placeholder="작업장 선택" options={[{ label: '선택 안함', value: '' }, ...workshopOptions]} defaultValue={form.getFieldsValue().workshop_cd ?? ''} onChange={(e) => form.setFieldsValue({ workshop_cd: e.target.value } as any)} /></Row>
+            {mode === 'edit' && (<Row label="사용여부"><Select name="use_yn" options={USE_YN_OPTIONS} defaultValue={form.getFieldsValue().use_yn ?? 'Y'} onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as any)} /></Row>)}
+          </Section>
         )}
       </FormModal>
 

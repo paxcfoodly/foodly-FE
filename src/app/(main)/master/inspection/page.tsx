@@ -8,7 +8,7 @@ import Table from '@/components/ui/Table';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -142,19 +142,23 @@ export default function InspectStdMasterPage() {
 
       <FormModal<InspectStdFormValues> open={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSubmit={handleSubmit} mode={modalMode} initialValues={modalInitialValues} title={modalMode === 'create' ? '검사기준 등록' : '검사기준 수정'} width={600}>
         {(form, mode) => (
-          <>
-            <FormField label="품목"><Select name="item_cd" placeholder="품목 선택" options={[{ label: '선택 안함', value: '' }, ...itemOptions]} defaultValue={form.getFieldsValue().item_cd ?? ''} onChange={(e) => form.setFieldsValue({ item_cd: e.target.value } as any)} /></FormField>
-            <FormField label="공정"><Select name="process_cd" placeholder="공정 선택" options={[{ label: '선택 안함', value: '' }, ...processOptions]} defaultValue={form.getFieldsValue().process_cd ?? ''} onChange={(e) => form.setFieldsValue({ process_cd: e.target.value } as any)} /></FormField>
-            <FormField label="검사유형"><Select name="inspect_type" placeholder="검사유형 선택" options={[{ label: '선택 안함', value: '' }, ...INSPECT_TYPE_OPTIONS]} defaultValue={form.getFieldsValue().inspect_type ?? ''} onChange={(e) => form.setFieldsValue({ inspect_type: e.target.value } as any)} /></FormField>
-            <FormField label="검사항목명" required><Input name="inspect_item_nm" placeholder="검사항목명 입력" maxLength={200} required defaultValue={form.getFieldsValue().inspect_item_nm ?? ''} onChange={(e) => form.setFieldsValue({ inspect_item_nm: e.target.value } as any)} /></FormField>
-            <FormField label="측정유형"><Select name="measure_type" placeholder="측정유형 선택" options={[{ label: '선택 안함', value: '' }, ...MEASURE_TYPE_OPTIONS]} defaultValue={form.getFieldsValue().measure_type ?? ''} onChange={(e) => form.setFieldsValue({ measure_type: e.target.value } as any)} /></FormField>
-            <FormField label="LSL (하한)"><input type="number" name="lsl" placeholder="하한값" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={form.getFieldsValue().lsl ?? ''} onChange={(e) => form.setFieldsValue({ lsl: e.target.value ? Number(e.target.value) : undefined } as any)} /></FormField>
-            <FormField label="목표값"><input type="number" name="target_val" placeholder="목표값" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={form.getFieldsValue().target_val ?? ''} onChange={(e) => form.setFieldsValue({ target_val: e.target.value ? Number(e.target.value) : undefined } as any)} /></FormField>
-            <FormField label="USL (상한)"><input type="number" name="usl" placeholder="상한값" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={form.getFieldsValue().usl ?? ''} onChange={(e) => form.setFieldsValue({ usl: e.target.value ? Number(e.target.value) : undefined } as any)} /></FormField>
-            <FormField label="단위"><Input name="unit" placeholder="단위 입력 (mm, kg 등)" maxLength={20} defaultValue={form.getFieldsValue().unit ?? ''} onChange={(e) => form.setFieldsValue({ unit: e.target.value } as any)} /></FormField>
-            <FormField label="샘플링기준"><Input name="sampling_std" placeholder="샘플링기준 입력" maxLength={100} defaultValue={form.getFieldsValue().sampling_std ?? ''} onChange={(e) => form.setFieldsValue({ sampling_std: e.target.value } as any)} /></FormField>
-            {mode === 'edit' && (<FormField label="사용여부"><Select name="use_yn" options={USE_YN_OPTIONS} defaultValue={form.getFieldsValue().use_yn ?? 'Y'} onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as any)} /></FormField>)}
-          </>
+          <div className="space-y-5">
+            <Section title="검사 기준 정보">
+              <Row label="품목"><Select name="item_cd" placeholder="품목 선택" options={[{ label: '선택 안함', value: '' }, ...itemOptions]} defaultValue={form.getFieldsValue().item_cd ?? ''} onChange={(e) => form.setFieldsValue({ item_cd: e.target.value } as any)} /></Row>
+              <Row label="공정"><Select name="process_cd" placeholder="공정 선택" options={[{ label: '선택 안함', value: '' }, ...processOptions]} defaultValue={form.getFieldsValue().process_cd ?? ''} onChange={(e) => form.setFieldsValue({ process_cd: e.target.value } as any)} /></Row>
+              <Row label="검사유형"><Select name="inspect_type" placeholder="검사유형 선택" options={[{ label: '선택 안함', value: '' }, ...INSPECT_TYPE_OPTIONS]} defaultValue={form.getFieldsValue().inspect_type ?? ''} onChange={(e) => form.setFieldsValue({ inspect_type: e.target.value } as any)} /></Row>
+              <Row label="검사항목명" required><Input name="inspect_item_nm" placeholder="검사항목명 입력" maxLength={200} required defaultValue={form.getFieldsValue().inspect_item_nm ?? ''} onChange={(e) => form.setFieldsValue({ inspect_item_nm: e.target.value } as any)} /></Row>
+              <Row label="측정유형"><Select name="measure_type" placeholder="측정유형 선택" options={[{ label: '선택 안함', value: '' }, ...MEASURE_TYPE_OPTIONS]} defaultValue={form.getFieldsValue().measure_type ?? ''} onChange={(e) => form.setFieldsValue({ measure_type: e.target.value } as any)} /></Row>
+              {mode === 'edit' && (<Row label="사용여부"><Select name="use_yn" options={USE_YN_OPTIONS} defaultValue={form.getFieldsValue().use_yn ?? 'Y'} onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as any)} /></Row>)}
+            </Section>
+            <Section title="측정 범위 / 기준">
+              <Row label="LSL (하한)"><input type="number" name="lsl" placeholder="하한값" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={form.getFieldsValue().lsl ?? ''} onChange={(e) => form.setFieldsValue({ lsl: e.target.value ? Number(e.target.value) : undefined } as any)} /></Row>
+              <Row label="목표값"><input type="number" name="target_val" placeholder="목표값" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={form.getFieldsValue().target_val ?? ''} onChange={(e) => form.setFieldsValue({ target_val: e.target.value ? Number(e.target.value) : undefined } as any)} /></Row>
+              <Row label="USL (상한)"><input type="number" name="usl" placeholder="상한값" className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={form.getFieldsValue().usl ?? ''} onChange={(e) => form.setFieldsValue({ usl: e.target.value ? Number(e.target.value) : undefined } as any)} /></Row>
+              <Row label="단위"><Input name="unit" placeholder="단위 입력 (mm, kg 등)" maxLength={20} defaultValue={form.getFieldsValue().unit ?? ''} onChange={(e) => form.setFieldsValue({ unit: e.target.value } as any)} /></Row>
+              <Row label="샘플링기준"><Input name="sampling_std" placeholder="샘플링기준 입력" maxLength={100} defaultValue={form.getFieldsValue().sampling_std ?? ''} onChange={(e) => form.setFieldsValue({ sampling_std: e.target.value } as any)} /></Row>
+            </Section>
+          </div>
         )}
       </FormModal>
       <DataHistoryDrawer open={historyOpen} onClose={() => setHistoryOpen(false)} tableName="tb_inspect_std" recordId={historyCd} title={`검사기준 변경이력 (${historyCd})`} />

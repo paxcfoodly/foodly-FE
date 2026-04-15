@@ -16,7 +16,7 @@ import Table from '@/components/ui/Table';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -738,8 +738,8 @@ export default function ProcessMasterPage() {
         width={520}
       >
         {(form, mode) => (
-          <>
-            <FormField label="공정코드" required>
+          <Section title="공정 정보">
+            <Row label="공정코드" required>
               <Input
                 name="process_cd"
                 placeholder="공정코드 입력"
@@ -749,8 +749,8 @@ export default function ProcessMasterPage() {
                 defaultValue={form.getFieldsValue().process_cd ?? ''}
                 onChange={(e) => form.setFieldsValue({ process_cd: e.target.value } as Partial<ProcessFormValues>)}
               />
-            </FormField>
-            <FormField label="공정명" required>
+            </Row>
+            <Row label="공정명" required>
               <Input
                 name="process_nm"
                 placeholder="공정명 입력"
@@ -759,8 +759,8 @@ export default function ProcessMasterPage() {
                 defaultValue={form.getFieldsValue().process_nm ?? ''}
                 onChange={(e) => form.setFieldsValue({ process_nm: e.target.value } as Partial<ProcessFormValues>)}
               />
-            </FormField>
-            <FormField label="공정유형">
+            </Row>
+            <Row label="공정유형">
               <Select
                 name="process_type"
                 placeholder="공정유형 선택"
@@ -768,8 +768,8 @@ export default function ProcessMasterPage() {
                 defaultValue={form.getFieldsValue().process_type ?? ''}
                 onChange={(e) => form.setFieldsValue({ process_type: e.target.value || null } as Partial<ProcessFormValues>)}
               />
-            </FormField>
-            <FormField label="표준시간(분)">
+            </Row>
+            <Row label="표준시간(분)">
               <input
                 type="number"
                 name="std_time"
@@ -780,8 +780,8 @@ export default function ProcessMasterPage() {
                 defaultValue={form.getFieldsValue().std_time ?? ''}
                 onChange={(e) => form.setFieldsValue({ std_time: e.target.value ? Number(e.target.value) : null } as Partial<ProcessFormValues>)}
               />
-            </FormField>
-            <FormField label="작업장코드">
+            </Row>
+            <Row label="작업장코드">
               <Input
                 name="workshop_cd"
                 placeholder="작업장코드 입력"
@@ -789,18 +789,18 @@ export default function ProcessMasterPage() {
                 defaultValue={form.getFieldsValue().workshop_cd ?? ''}
                 onChange={(e) => form.setFieldsValue({ workshop_cd: e.target.value || null } as Partial<ProcessFormValues>)}
               />
-            </FormField>
+            </Row>
             {mode === 'edit' && (
-              <FormField label="사용여부">
+              <Row label="사용여부">
                 <Select
                   name="use_yn"
                   options={USE_YN_OPTIONS}
                   defaultValue={form.getFieldsValue().use_yn ?? 'Y'}
                   onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as Partial<ProcessFormValues>)}
                 />
-              </FormField>
+              </Row>
             )}
-          </>
+          </Section>
         )}
       </FormModal>
 

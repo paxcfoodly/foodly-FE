@@ -8,7 +8,7 @@ import Table from '@/components/ui/Table';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -150,15 +150,15 @@ export default function WorkshopMasterPage() {
 
       <FormModal<WorkshopFormValues> open={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSubmit={handleSubmit} mode={modalMode} initialValues={modalInitialValues} title={modalMode === 'create' ? '작업장 등록' : '작업장 수정'} width={560}>
         {(form, mode) => (
-          <>
-            <FormField label="작업장코드" required><Input name="workshop_cd" placeholder="작업장코드 입력" disabled={mode === 'edit'} maxLength={30} required defaultValue={form.getFieldsValue().workshop_cd ?? ''} onChange={(e) => form.setFieldsValue({ workshop_cd: e.target.value } as any)} /></FormField>
-            <FormField label="작업장명" required><Input name="workshop_nm" placeholder="작업장명 입력" maxLength={200} required defaultValue={form.getFieldsValue().workshop_nm ?? ''} onChange={(e) => form.setFieldsValue({ workshop_nm: e.target.value } as any)} /></FormField>
-            <FormField label="공장코드" required><Input name="plant_cd" placeholder="공장코드 입력" required defaultValue={form.getFieldsValue().plant_cd ?? ''} onChange={(e) => form.setFieldsValue({ plant_cd: e.target.value } as any)} /></FormField>
-            <FormField label="상위작업장"><Select name="parent_cd" placeholder="상위작업장 선택" options={[{ label: '선택 안함', value: '' }, ...parentOptions]} defaultValue={form.getFieldsValue().parent_cd ?? ''} onChange={(e) => form.setFieldsValue({ parent_cd: e.target.value } as any)} /></FormField>
-            <FormField label="작업장유형"><Select name="workshop_type" placeholder="작업장유형 선택" options={[{ label: '선택 안함', value: '' }, ...WORKSHOP_TYPE_OPTIONS]} defaultValue={form.getFieldsValue().workshop_type ?? ''} onChange={(e) => form.setFieldsValue({ workshop_type: e.target.value } as any)} /></FormField>
-            <FormField label="정렬순서"><input type="number" name="sort_order" placeholder="정렬순서" min={0} step={1} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={form.getFieldsValue().sort_order ?? ''} onChange={(e) => form.setFieldsValue({ sort_order: e.target.value ? Number(e.target.value) : undefined } as any)} /></FormField>
-            {mode === 'edit' && (<FormField label="사용여부"><Select name="use_yn" options={USE_YN_OPTIONS} defaultValue={form.getFieldsValue().use_yn ?? 'Y'} onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as any)} /></FormField>)}
-          </>
+          <Section title="작업장 정보">
+            <Row label="작업장코드" required><Input name="workshop_cd" placeholder="작업장코드 입력" disabled={mode === 'edit'} maxLength={30} required defaultValue={form.getFieldsValue().workshop_cd ?? ''} onChange={(e) => form.setFieldsValue({ workshop_cd: e.target.value } as any)} /></Row>
+            <Row label="작업장명" required><Input name="workshop_nm" placeholder="작업장명 입력" maxLength={200} required defaultValue={form.getFieldsValue().workshop_nm ?? ''} onChange={(e) => form.setFieldsValue({ workshop_nm: e.target.value } as any)} /></Row>
+            <Row label="공장코드" required><Input name="plant_cd" placeholder="공장코드 입력" required defaultValue={form.getFieldsValue().plant_cd ?? ''} onChange={(e) => form.setFieldsValue({ plant_cd: e.target.value } as any)} /></Row>
+            <Row label="상위작업장"><Select name="parent_cd" placeholder="상위작업장 선택" options={[{ label: '선택 안함', value: '' }, ...parentOptions]} defaultValue={form.getFieldsValue().parent_cd ?? ''} onChange={(e) => form.setFieldsValue({ parent_cd: e.target.value } as any)} /></Row>
+            <Row label="작업장유형"><Select name="workshop_type" placeholder="작업장유형 선택" options={[{ label: '선택 안함', value: '' }, ...WORKSHOP_TYPE_OPTIONS]} defaultValue={form.getFieldsValue().workshop_type ?? ''} onChange={(e) => form.setFieldsValue({ workshop_type: e.target.value } as any)} /></Row>
+            <Row label="정렬순서"><input type="number" name="sort_order" placeholder="정렬순서" min={0} step={1} className="w-full h-9 bg-dark-700 border border-dark-500 rounded-lg px-3 text-sm text-gray-700 focus:outline-none focus:bg-white focus:border-cyan-accent focus:ring-2 focus:ring-cyan-accent/15" defaultValue={form.getFieldsValue().sort_order ?? ''} onChange={(e) => form.setFieldsValue({ sort_order: e.target.value ? Number(e.target.value) : undefined } as any)} /></Row>
+            {mode === 'edit' && (<Row label="사용여부"><Select name="use_yn" options={USE_YN_OPTIONS} defaultValue={form.getFieldsValue().use_yn ?? 'Y'} onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as any)} /></Row>)}
+          </Section>
         )}
       </FormModal>
       <DataHistoryDrawer open={historyOpen} onClose={() => setHistoryOpen(false)} tableName="tb_workshop" recordId={historyCd} title={`작업장 변경이력 (${historyCd})`} />

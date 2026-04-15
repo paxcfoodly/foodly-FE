@@ -8,7 +8,7 @@ import Table from '@/components/ui/Table';
 import type { TableColumn, PaginationConfig } from '@/components/ui/Table';
 import toast from '@/components/ui/toast';
 import { confirm } from '@/components/ui/confirm';
-import FormField from '@/components/ui/FormField';
+import { Section, Row } from '@/components/ui/Section';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import PermissionButton from '@/components/auth/PermissionButton';
@@ -129,14 +129,14 @@ export default function WorkerMasterPage() {
 
       <FormModal<WorkerFormValues> open={modalOpen} onClose={() => { setModalOpen(false); setEditItem(null); }} onSubmit={handleSubmit} mode={modalMode} initialValues={modalInitialValues} title={modalMode === 'create' ? '작업자 등록' : '작업자 수정'} width={520}>
         {(form, mode) => (
-          <>
-            <FormField label="사번" required><Input name="worker_id" placeholder="사번 입력" disabled={mode === 'edit'} maxLength={20} required defaultValue={form.getFieldsValue().worker_id ?? ''} onChange={(e) => form.setFieldsValue({ worker_id: e.target.value } as any)} /></FormField>
-            <FormField label="작업자명" required><Input name="worker_nm" placeholder="작업자명 입력" maxLength={100} required defaultValue={form.getFieldsValue().worker_nm ?? ''} onChange={(e) => form.setFieldsValue({ worker_nm: e.target.value } as any)} /></FormField>
-            <FormField label="부서"><CommonCodeSelect groupCd="DEPT" placeholder="부서 선택" value={form.getFieldsValue().dept_cd} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => form.setFieldsValue({ dept_cd: e.target.value } as any)} /></FormField>
-            <FormField label="작업장"><Select name="workshop_cd" placeholder="작업장 선택" options={[{ label: '선택 안함', value: '' }, ...workshopOptions]} defaultValue={form.getFieldsValue().workshop_cd ?? ''} onChange={(e) => form.setFieldsValue({ workshop_cd: e.target.value } as any)} /></FormField>
-            <FormField label="교대"><CommonCodeSelect groupCd="SHIFT" placeholder="교대 선택" value={form.getFieldsValue().shift_cd} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => form.setFieldsValue({ shift_cd: e.target.value } as any)} /></FormField>
-            {mode === 'edit' && (<FormField label="사용여부"><Select name="use_yn" options={USE_YN_OPTIONS} defaultValue={form.getFieldsValue().use_yn ?? 'Y'} onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as any)} /></FormField>)}
-          </>
+          <Section title="작업자 정보">
+            <Row label="사번" required><Input name="worker_id" placeholder="사번 입력" disabled={mode === 'edit'} maxLength={20} required defaultValue={form.getFieldsValue().worker_id ?? ''} onChange={(e) => form.setFieldsValue({ worker_id: e.target.value } as any)} /></Row>
+            <Row label="작업자명" required><Input name="worker_nm" placeholder="작업자명 입력" maxLength={100} required defaultValue={form.getFieldsValue().worker_nm ?? ''} onChange={(e) => form.setFieldsValue({ worker_nm: e.target.value } as any)} /></Row>
+            <Row label="부서"><CommonCodeSelect groupCd="DEPT" placeholder="부서 선택" value={form.getFieldsValue().dept_cd} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => form.setFieldsValue({ dept_cd: e.target.value } as any)} /></Row>
+            <Row label="작업장"><Select name="workshop_cd" placeholder="작업장 선택" options={[{ label: '선택 안함', value: '' }, ...workshopOptions]} defaultValue={form.getFieldsValue().workshop_cd ?? ''} onChange={(e) => form.setFieldsValue({ workshop_cd: e.target.value } as any)} /></Row>
+            <Row label="교대"><CommonCodeSelect groupCd="SHIFT" placeholder="교대 선택" value={form.getFieldsValue().shift_cd} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => form.setFieldsValue({ shift_cd: e.target.value } as any)} /></Row>
+            {mode === 'edit' && (<Row label="사용여부"><Select name="use_yn" options={USE_YN_OPTIONS} defaultValue={form.getFieldsValue().use_yn ?? 'Y'} onChange={(e) => form.setFieldsValue({ use_yn: e.target.value } as any)} /></Row>)}
+          </Section>
         )}
       </FormModal>
       <DataHistoryDrawer open={historyOpen} onClose={() => setHistoryOpen(false)} tableName="tb_worker" recordId={historyCd} title={`작업자 변경이력 (${historyCd})`} />
