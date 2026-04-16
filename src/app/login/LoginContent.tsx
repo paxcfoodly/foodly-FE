@@ -9,8 +9,6 @@ import {
   Activity,
   FileSpreadsheet,
   ClipboardCheck,
-  Wrench,
-  Truck,
 } from 'lucide-react';
 import { Button, Alert } from '@/components/ui';
 import Input from '@/components/ui/Input';
@@ -97,193 +95,178 @@ export default function LoginContent() {
     {
       icon: ClipboardCheck,
       title: '생산계획 · 작업지시',
-      desc: '수주에서 실적까지 한 흐름으로 관리',
-    },
-    {
-      icon: Activity,
-      title: '실시간 설비 모니터링',
-      desc: '설비 가동 · OEE 지표를 한눈에',
+      desc: '수주에서 실적까지 단일 흐름',
     },
     {
       icon: ScanLine,
-      title: 'LOT 추적 · 품질 이력',
-      desc: '원자재부터 출하까지 정·역방향 추적',
+      title: 'LOT 정·역방향 추적',
+      desc: '원자재–제품–출하 단위 추적',
     },
     {
-      icon: Wrench,
-      title: '예방보전 · 점검 이력',
-      desc: '보전계획 캘린더와 정비 이력 통합',
-    },
-    {
-      icon: Truck,
-      title: '출하 · 재고 흐름',
-      desc: '입고/불출/출하 실시간 재고 반영',
+      icon: Activity,
+      title: '설비 OEE · 실시간 가동',
+      desc: '가용성·성능·품질 자동 집계',
     },
     {
       icon: FileSpreadsheet,
-      title: '리포트 · 엑셀 출력',
-      desc: '일보 · KPI · 불량 파레토 즉시 내려받기',
+      title: '리포트 · 엑셀 내보내기',
+      desc: '일보 · KPI · 불량 파레토',
     },
   ];
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-cyan-50 to-gray-100">
-      {/* 좌측 — Foodly 서비스 소개 (lg 이상에서만 표시) */}
-      <aside className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 xl:p-16 bg-gradient-to-br from-cyan-accent to-cyan-600 text-white">
-        <div>
-          <h1 className="text-3xl font-bold">🍽️ Foodly MES</h1>
-          <p className="text-sm text-white/80 mt-1">Manufacturing Execution System</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 to-gray-100 p-4">
+      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-lg overflow-hidden grid grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
+        {/* 좌측 — 서비스 소개 */}
+        <aside className="relative p-10 xl:p-12 bg-gray-50 border-b lg:border-b-0 lg:border-r border-gray-100 flex flex-col">
+          <span className="absolute left-0 top-10 bottom-10 w-0.5 bg-cyan-accent rounded-r-full hidden lg:block" />
 
-        <div>
-          <h2 className="text-3xl xl:text-4xl font-bold leading-snug">
-            식품 제조 현장을
-            <br />
-            디지털로 연결합니다
-          </h2>
-          <p className="mt-3 text-white/80 text-sm leading-relaxed">
-            생산계획부터 출하까지 모든 현장 데이터를 실시간으로 흐르게 합니다.
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-cyan-accent" />
+              <span className="text-xs font-semibold text-cyan-accent uppercase tracking-widest">Foodly MES</span>
+            </div>
+            <h1 className="mt-3 text-2xl xl:text-[28px] font-semibold text-gray-800 leading-snug">
+              식품 제조 실행 관리
+              <br />
+              플랫폼
+            </h1>
+            <p className="mt-3 text-sm text-gray-500 leading-relaxed max-w-[340px]">
+              생산계획부터 출하까지 공장의 모든 데이터를
+              <br className="hidden xl:block" /> 한 곳에서 실시간으로 관리합니다.
+            </p>
+          </div>
 
-          <ul className="mt-8 space-y-3">
+          <ul className="mt-8 space-y-4 flex-1">
             {features.map((f) => (
               <li key={f.title} className="flex items-start gap-3">
-                <span className="shrink-0 w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center">
-                  <f.icon className="w-5 h-5" />
+                <span className="shrink-0 w-9 h-9 rounded-lg bg-white border border-gray-100 flex items-center justify-center">
+                  <f.icon className="w-4.5 h-4.5 text-cyan-accent" />
                 </span>
-                <div>
-                  <div className="text-sm font-semibold">{f.title}</div>
-                  <div className="text-xs text-white/75">{f.desc}</div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-gray-800">{f.title}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{f.desc}</div>
                 </div>
               </li>
             ))}
           </ul>
-        </div>
 
-        <div className="text-xs text-white/60">
-          © {new Date().getFullYear()} Foodly · 식품 제조 통합 관리 플랫폼
-        </div>
-      </aside>
-
-      {/* 우측 — 로그인 */}
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-[400px] bg-white rounded-xl p-8 shadow-lg">
-          <div className="flex flex-col gap-6 w-full">
-            {/* 모바일에서만 표시되는 간략 타이틀 */}
-            <div className="text-center lg:hidden">
-              <h1 className="text-2xl font-bold text-gray-900 m-0">🍽️ Foodly MES</h1>
-              <p className="text-sm text-gray-500 mt-1">식품 제조 실행 시스템</p>
-            </div>
-
-            {/* 데스크톱에서 표시되는 로그인 헤더 */}
-            <div className="hidden lg:block">
-              <h2 className="text-xl font-semibold text-gray-800">로그인</h2>
-              <p className="text-sm text-gray-500 mt-1">계정을 선택해 로그인하세요</p>
-            </div>
-
-            {/* 세션 만료 안내 */}
-            {reasonMessage && (
-              <Alert type="warning" message={reasonMessage} showIcon closable />
-            )}
-
-            {/* 에러 메시지 */}
-            {errorMsg && (
-              <Alert
-                type="error"
-                message={errorMsg}
-                showIcon
-                closable
-                onClose={() => setErrorMsg(null)}
-              />
-            )}
-
-            {/* 로그인 폼 */}
-            <form onSubmit={handleLogin} className="flex flex-col gap-4" autoComplete="off">
-              <div>
-                <Input
-                  addonBefore={<User className="w-4 h-4" />}
-                  placeholder="아이디"
-                  autoFocus
-                  value={formValues.login_id}
-                  onChange={(e) => setFormValues((v) => ({ ...v, login_id: e.target.value }))}
-                  className={errors.login_id ? '!border-red-400' : ''}
-                />
-                {errors.login_id && (
-                  <p className="text-xs text-red-500 mt-1">{errors.login_id}</p>
-                )}
-              </div>
-
-              <div>
-                <Input
-                  type="password"
-                  addonBefore={<Lock className="w-4 h-4" />}
-                  placeholder="비밀번호"
-                  value={formValues.password}
-                  onChange={(e) => setFormValues((v) => ({ ...v, password: e.target.value }))}
-                  className={errors.password ? '!border-red-400' : ''}
-                />
-                {errors.password && (
-                  <p className="text-xs text-red-500 mt-1">{errors.password}</p>
-                )}
-              </div>
-
-              <Button variant="primary" type="submit" loading={loading} block size="large">
-                로그인
-              </Button>
-            </form>
-
-            {/* 소셜 로그인 구분선 */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400">또는</span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-
-            {/* 소셜 로그인 버튼 */}
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => handleSocialLogin('google')}
-                className="h-11 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.98 10.98 0 0 0 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.11c-.22-.66-.35-1.36-.35-2.11s.13-1.45.35-2.11V7.05H2.18A10.98 10.98 0 0 0 1 12c0 1.77.42 3.45 1.18 4.95l3.66-2.84z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A10.98 10.98 0 0 0 2.18 7.05l3.66 2.84C6.71 7.29 9.14 5.38 12 5.38z"
-                    fill="#EA4335"
-                  />
-                </svg>
-                Google 계정으로 로그인
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSocialLogin('kakao')}
-                className="h-11 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#FEE500] text-sm font-medium text-[#3C1E1E] hover:bg-[#FFDB2D] transition-colors"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 3C6.48 3 2 6.58 2 11c0 2.86 1.86 5.37 4.66 6.79L5.5 21.5c-.08.28.23.52.48.36l4.16-2.75c.61.06 1.23.1 1.86.1 5.52 0 10-3.58 10-8S17.52 3 12 3z" />
-                </svg>
-                카카오 계정으로 로그인
-              </button>
-            </div>
-
-            <p className="text-center text-xs text-gray-400">
-              소셜 로그인은 준비 중입니다
-            </p>
+          <div className="mt-8 flex items-center gap-4 text-[11px] text-gray-400">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-gray-300" />
+              HACCP 기준 기록 설계
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-gray-300" />
+              JWT 기반 RBAC
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-gray-300" />
+              감사로그 자동기록
+            </span>
           </div>
+        </aside>
+
+        {/* 우측 — 로그인 */}
+        <div className="p-8 xl:p-10 flex flex-col gap-6 justify-center">
+          <div className="text-center lg:text-left">
+            <h2 className="text-xl font-semibold text-gray-800">로그인</h2>
+            <p className="text-sm text-gray-500 mt-1">계정 정보를 입력해 주세요</p>
+          </div>
+
+          {/* 세션 만료 안내 */}
+          {reasonMessage && <Alert type="warning" message={reasonMessage} showIcon closable />}
+
+          {/* 에러 메시지 */}
+          {errorMsg && (
+            <Alert
+              type="error"
+              message={errorMsg}
+              showIcon
+              closable
+              onClose={() => setErrorMsg(null)}
+            />
+          )}
+
+          {/* 로그인 폼 */}
+          <form onSubmit={handleLogin} className="flex flex-col gap-4" autoComplete="off">
+            <div>
+              <Input
+                addonBefore={<User className="w-4 h-4" />}
+                placeholder="아이디"
+                autoFocus
+                value={formValues.login_id}
+                onChange={(e) => setFormValues((v) => ({ ...v, login_id: e.target.value }))}
+                className={errors.login_id ? '!border-red-400' : ''}
+              />
+              {errors.login_id && <p className="text-xs text-red-500 mt-1">{errors.login_id}</p>}
+            </div>
+
+            <div>
+              <Input
+                type="password"
+                addonBefore={<Lock className="w-4 h-4" />}
+                placeholder="비밀번호"
+                value={formValues.password}
+                onChange={(e) => setFormValues((v) => ({ ...v, password: e.target.value }))}
+                className={errors.password ? '!border-red-400' : ''}
+              />
+              {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
+            </div>
+
+            <Button variant="primary" type="submit" loading={loading} block size="large">
+              로그인
+            </Button>
+          </form>
+
+          {/* 소셜 로그인 */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400">또는</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => handleSocialLogin('google')}
+              className="h-11 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.98 10.98 0 0 0 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.11c-.22-.66-.35-1.36-.35-2.11s.13-1.45.35-2.11V7.05H2.18A10.98 10.98 0 0 0 1 12c0 1.77.42 3.45 1.18 4.95l3.66-2.84z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A10.98 10.98 0 0 0 2.18 7.05l3.66 2.84C6.71 7.29 9.14 5.38 12 5.38z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Google 계정으로 로그인
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSocialLogin('kakao')}
+              className="h-11 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#FEE500] text-sm font-medium text-[#3C1E1E] hover:bg-[#FFDB2D] transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3C6.48 3 2 6.58 2 11c0 2.86 1.86 5.37 4.66 6.79L5.5 21.5c-.08.28.23.52.48.36l4.16-2.75c.61.06 1.23.1 1.86.1 5.52 0 10-3.58 10-8S17.52 3 12 3z" />
+              </svg>
+              카카오 계정으로 로그인
+            </button>
+          </div>
+
+          <p className="text-center text-[11px] text-gray-400">소셜 로그인은 준비 중입니다</p>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
