@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './globals.css';
 import AuthGuard from '@/components/auth/AuthGuard';
 import SessionWarningModal from '@/components/auth/SessionWarningModal';
