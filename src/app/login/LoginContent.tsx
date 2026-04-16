@@ -126,7 +126,7 @@ export default function LoginContent() {
             <h1 className="mt-4 text-[28px] xl:text-4xl font-bold text-gray-900 leading-tight tracking-tight whitespace-nowrap">
               식품 제조 현장을 <span className="text-cyan-accent">한 곳에서</span>
             </h1>
-            <p className="mt-3 text-sm text-gray-500 leading-relaxed max-w-[360px]">
+            <p className="mt-3 text-sm text-gray-500 leading-relaxed whitespace-nowrap">
               생산계획부터 출하까지 공장의 모든 데이터를 실시간으로 관리합니다.
             </p>
           </div>
