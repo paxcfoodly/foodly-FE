@@ -118,22 +118,16 @@ export default function LoginContent() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 to-gray-100 p-4">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-lg overflow-hidden grid grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
         {/* 좌측 — 서비스 소개 */}
-        <aside className="relative p-10 xl:p-12 bg-gray-50 border-b lg:border-b-0 lg:border-r border-gray-100 flex flex-col">
-          <span className="absolute left-0 top-10 bottom-10 w-0.5 bg-cyan-accent rounded-r-full hidden lg:block" />
-
+        <aside className="p-10 xl:p-12 bg-gray-50 border-b lg:border-b-0 lg:border-r border-gray-100 flex flex-col">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-cyan-accent" />
-              <span className="text-xs font-semibold text-cyan-accent uppercase tracking-widest">Foodly MES</span>
-            </div>
-            <h1 className="mt-3 text-2xl xl:text-[28px] font-semibold text-gray-800 leading-snug">
-              식품 제조 실행 관리
-              <br />
-              플랫폼
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.2em]">
+              Foodly MES
+            </span>
+            <h1 className="mt-4 text-[28px] xl:text-4xl font-bold text-gray-900 leading-tight tracking-tight whitespace-nowrap">
+              식품 제조 현장을 <span className="text-cyan-accent">한 곳에서</span>
             </h1>
-            <p className="mt-3 text-sm text-gray-500 leading-relaxed max-w-[340px]">
-              생산계획부터 출하까지 공장의 모든 데이터를
-              <br className="hidden xl:block" /> 한 곳에서 실시간으로 관리합니다.
+            <p className="mt-3 text-sm text-gray-500 leading-relaxed max-w-[360px]">
+              생산계획부터 출하까지 공장의 모든 데이터를 실시간으로 관리합니다.
             </p>
           </div>
 
