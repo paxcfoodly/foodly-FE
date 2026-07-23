@@ -36,7 +36,7 @@ function StatusTag({ status }: { status: string }) { const cfg = STATUS_MAP[stat
 
 export default function ShipmentOrderPage() {
   const { user } = useAuthStore();
-  const isAdmin = user?.roleCd === 'SYS_ADMIN' || user?.roleCd === 'PROD_MGR';
+  const isAdmin = user?.roleCd === 'SYS_ADMIN' || user?.roleCd === 'PROD_MGR' || user?.roleCd === 'MES_USER';
 
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(false);
