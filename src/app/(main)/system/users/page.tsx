@@ -37,6 +37,7 @@ interface UserFormValues {
   password?: string;
   user_nm: string;
   role_cd: string | null;
+  company_cd: string | null;
   status: string;
   [key: string]: unknown;
 }
@@ -44,6 +45,11 @@ interface UserFormValues {
 interface RoleOption {
   role_cd: string;
   role_nm: string;
+}
+
+interface CompanyOption {
+  company_cd: string;
+  company_nm: string;
 }
 
 const MENU_URL = '/system/users';
@@ -75,6 +81,9 @@ export default function UsersPage() {
   // Role options
   const [roleOptions, setRoleOptions] = useState<RoleOption[]>([]);
 
+  // Company options (멀티테넌시 — 사용자 소속 회사)
+  const [companyOptions, setCompanyOptions] = useState<CompanyOption[]>([]);
+
   /* ── Fetch roles for dropdown ─── */
   const fetchRoles = useCallback(async () => {
     try {
@@ -87,9 +96,20 @@ export default function UsersPage() {
     }
   }, []);
 
+  const fetchCompanies = useCallback(async () => {
+    try {
+      const res = await apiClient.get<ApiResponse<CompanyOption[]>>('/v1/users/companies');
+      const companies = res.data.data ?? [];
+      setCompanyOptions(Array.isArray(companies) ? companies : []);
+    } catch {
+      setCompanyOptions([]);
+    }
+  }, []);
+
   useEffect(() => {
     fetchRoles();
-  }, [fetchRoles]);
+    fetchCompanies();
+  }, [fetchRoles, fetchCompanies]);
 
   /* ── Fetch users ─── */
   const fetchUsers = useCallback(async () => {
@@ -192,6 +212,13 @@ export default function UsersPage() {
         dataIndex: 'user_nm',
         width: 120,
         sorter: true,
+      },
+      {
+        title: '회사',
+        dataIndex: 'company_cd',
+        width: 130,
+        render: (_: unknown, record: UserRow) =>
+          record.company?.company_nm ?? record.company_cd ?? '-',
       },
       {
         title: '역할',
@@ -318,11 +345,13 @@ export default function UsersPage() {
           password: values.password,
           user_nm: values.user_nm,
           role_cd: values.role_cd || null,
+          company_cd: values.company_cd || null,
         });
       } else {
         await apiClient.put(`/v1/users/${editRecord!.user_id}`, {
           user_nm: values.user_nm,
           role_cd: values.role_cd || null,
+          company_cd: values.company_cd || null,
           status: values.status,
         });
       }
@@ -363,6 +392,7 @@ export default function UsersPage() {
       login_id: editRecord.login_id,
       user_nm: editRecord.user_nm,
       role_cd: editRecord.role_cd ?? undefined,
+      company_cd: editRecord.company_cd ?? undefined,
       status: editRecord.status,
     } as Partial<UserFormValues>;
   }, [editRecord]);
@@ -453,6 +483,18 @@ export default function UsersPage() {
                 />
               </Row>
             )}
+            <Row label="회사">
+              <Select
+                name="company_cd"
+                placeholder="회사 선택 (플랫폼 운영자는 비움)"
+                value={(form.getFieldsValue().company_cd as string) ?? ''}
+                onChange={(e) => form.setFieldsValue({ company_cd: e.target.value || null } as Partial<UserFormValues>)}
+                options={companyOptions.map((c) => ({
+                  label: `${c.company_nm} (${c.company_cd})`,
+                  value: c.company_cd,
+                }))}
+              />
+            </Row>
             <Row label="역할">
               <Select
                 name="role_cd"

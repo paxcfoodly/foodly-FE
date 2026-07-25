@@ -119,7 +119,7 @@ export default function AppHeader({
                 </div>
                 {user?.roleNm && (
                   <div className="text-xs text-dark-400">
-                    {user.roleNm}
+                    {user.companyNm ? `${user.companyNm} · ${user.roleNm}` : user.roleNm}
                   </div>
                 )}
               </div>

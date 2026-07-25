@@ -10,6 +10,7 @@ export interface User {
   roleCd: string | null;
   roleNm: string | null;
   companyCd: string | null;
+  companyNm: string | null;
 }
 
 /** 로그인 요청 */
