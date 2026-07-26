@@ -1,18 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import {
-  Bell,
   User,
   LogOut,
   Search,
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
+  KeyRound,
 } from 'lucide-react';
-import { Dropdown, Badge, Avatar } from '@/components/ui';
+import { Dropdown, Avatar } from '@/components/ui';
 import type { DropdownItem } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { logoutApi } from '@/lib/authApi';
+import NotificationBell from './NotificationBell';
+import ChangePasswordModal from './ChangePasswordModal';
 
 interface AppHeaderProps {
   collapsed: boolean;
@@ -31,6 +34,7 @@ export default function AppHeader({
 }: AppHeaderProps) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const [pwModalOpen, setPwModalOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -44,9 +48,10 @@ export default function AppHeader({
 
   const userMenuItems: DropdownItem[] = [
     {
-      key: 'profile',
-      icon: <User className="w-4 h-4" />,
-      label: '내 정보',
+      key: 'change-password',
+      icon: <KeyRound className="w-4 h-4" />,
+      label: '비밀번호 변경',
+      onClick: () => setPwModalOpen(true),
     },
     { key: 'divider', type: 'divider', label: '' },
     {
@@ -99,11 +104,7 @@ export default function AppHeader({
           </div>
         )}
 
-        <button className="relative p-2 rounded-lg hover:bg-dark-700 transition-colors">
-          <Badge count={3} size="small">
-            <Bell className="w-5 h-5 text-gray-500" />
-          </Badge>
-        </button>
+        <NotificationBell />
 
         <Dropdown items={userMenuItems} trigger={['click']} placement="bottomRight">
           <div className="flex items-center gap-2 cursor-pointer">
@@ -127,6 +128,8 @@ export default function AppHeader({
           </div>
         </Dropdown>
       </div>
+
+      <ChangePasswordModal open={pwModalOpen} onClose={() => setPwModalOpen(false)} />
     </header>
   );
 }
