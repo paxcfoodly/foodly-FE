@@ -24,59 +24,8 @@ interface LineData {
   equipment: AndonEquip[];
 }
 
-/* ── Demo Data ── */
-const DEMO_LINES: LineData[] = [
-  {
-    lineId: 'line-1',
-    lineName: '라인 1 - 조립',
-    itemName: '하우징 어셈블리 A',
-    targetQty: 300,
-    actualQty: 262,
-    defectCount: 6,
-    defectRate: 2.2,
-    availabilityRate: 95.0,
-    shift: 'A조',
-    equipment: [
-      { equipCd: 'EQ-001', equipNm: 'CNC 선반 1', status: 'RUNNING' },
-      { equipCd: 'EQ-002', equipNm: 'CNC 선반 2', status: 'RUNNING' },
-      { equipCd: 'EQ-005', equipNm: '용접기 1', status: 'SETUP' },
-      { equipCd: 'EQ-006', equipNm: '용접기 2', status: 'RUNNING' },
-    ],
-  },
-  {
-    lineId: 'line-2',
-    lineName: '라인 2 - 성형',
-    itemName: '커넥터 브라켓 B',
-    targetQty: 250,
-    actualQty: 230,
-    defectCount: 8,
-    defectRate: 3.4,
-    availabilityRate: 88.5,
-    shift: 'A조',
-    equipment: [
-      { equipCd: 'EQ-009', equipNm: '사출기 1', status: 'RUNNING' },
-      { equipCd: 'EQ-010', equipNm: '사출기 2', status: 'IDLE' },
-      { equipCd: 'EQ-003', equipNm: '프레스 A', status: 'DOWN' },
-      { equipCd: 'EQ-004', equipNm: '프레스 B', status: 'RUNNING' },
-    ],
-  },
-  {
-    lineId: 'line-3',
-    lineName: '라인 3 - 도장',
-    itemName: '외장 패널 C',
-    targetQty: 200,
-    actualQty: 185,
-    defectCount: 3,
-    defectRate: 1.6,
-    availabilityRate: 96.4,
-    shift: 'B조',
-    equipment: [
-      { equipCd: 'EQ-007', equipNm: '도장기', status: 'RUNNING' },
-      { equipCd: 'EQ-008', equipNm: '건조로', status: 'RUNNING' },
-      { equipCd: 'EQ-017', equipNm: '연삭기', status: 'RUNNING' },
-    ],
-  },
-];
+// 안돈 실시간 라인 데이터 — 집계 API 연동 전까지 비어 있음 (실적 연결 시 API 응답으로 대체)
+const LINES: LineData[] = [];
 
 /* ── Status config (light theme) ── */
 const statusStyle: Record<EquipStatus, { bg: string; text: string; ring: string }> = {
@@ -196,13 +145,14 @@ export default function AndonPage() {
   const [currentIdx, setCurrentIdx] = useState(0);
 
   useEffect(() => {
+    if (LINES.length === 0) return;
     const t = setInterval(() => {
-      setCurrentIdx((prev) => (prev + 1) % DEMO_LINES.length);
+      setCurrentIdx((prev) => (prev + 1) % LINES.length);
     }, 10000);
     return () => clearInterval(t);
   }, []);
 
-  const currentLine = DEMO_LINES[currentIdx];
+  const currentLine = LINES[currentIdx];
   const timeStr = clock.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   return (
@@ -212,7 +162,7 @@ export default function AndonPage() {
         <h4 className="text-lg font-bold text-slate-800">현장 안돈 (Andon)</h4>
         <div className="flex items-center gap-4">
           <div className="flex gap-1">
-            {DEMO_LINES.map((l, i) => (
+            {LINES.map((l, i) => (
               <button
                 key={l.lineId}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors border ${
@@ -236,20 +186,29 @@ export default function AndonPage() {
 
       {/* Andon display */}
       <div className="flex-1">
-        <AndonLine line={currentLine} />
+        {currentLine ? (
+          <AndonLine line={currentLine} />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-3 rounded-2xl border border-slate-200 bg-white">
+            <span className="text-2xl font-bold text-slate-400">가동 중인 라인이 없습니다</span>
+            <span className="text-sm text-slate-400">생산 실적이 등록되면 실시간 현황이 표시됩니다.</span>
+          </div>
+        )}
       </div>
 
       {/* Auto-rotate indicator */}
-      <div className="flex justify-center gap-2 mt-3">
-        {DEMO_LINES.map((_, i) => (
-          <div
-            key={i}
-            className={`w-2 h-2 rounded-full transition-colors ${
-              i === currentIdx ? 'bg-blue-500' : 'bg-slate-200'
-            }`}
-          />
-        ))}
-      </div>
+      {LINES.length > 0 && (
+        <div className="flex justify-center gap-2 mt-3">
+          {LINES.map((_, i) => (
+            <div
+              key={i}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                i === currentIdx ? 'bg-blue-500' : 'bg-slate-200'
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
